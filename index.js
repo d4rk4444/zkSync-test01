@@ -1255,6 +1255,7 @@ const withdrawETHToSubWalletArbitrum = async(toAddress, privateKey) => {
 
     await getETHAmount(info.rpcArbitrum, addressETH).then(async(amountETH) => {
         await getGasPrice(info.rpcArbitrum).then(async(gasPrice) => {
+            gasPrice = (parseInt(multiply(gasPrice, 1.2))).toString();
             amountETH = subtract(amountETH, 1100000 * multiply(gasPrice, 10**9));
             try {
                 await sendArbitrumTX(info.rpcArbitrum, generateRandomAmount(900000, 1000000, 0), gasPrice, gasPrice, toAddress, amountETH, null, privateKey);
