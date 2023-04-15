@@ -13,12 +13,17 @@
     6. Вывод на кошелек OKX c Arbitrum     
 2. РАНДОМ       
     1. Первая часть рандомизации    
-        - SyncSwap: Swap ETH -> USDC, Create LP     
+        - SyncSwap: Swap ETH -> USDC, Create LP ETH/USDC    
+        - SyncSwap: Swap ETH -> OT, Create LP ETH/OT   
         - SpaceFi: Swap ETH -> USDC, Create LP, Deposit LP for farming      
-        - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH     
+        - SpaceFi: Swap ETH -> SPACE, Create LP ETH/SPACE      
+        - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH   
+        - NexonFinance: Deposit ETH, Withdraw ETH       
     2. Вторая часть рандомизации    
         - SyncSwap: Delete LP, Swap USDC -> ETH     
-        - SpaceFi: Withdraw LP, Delete LP, Swap ETH -> USDC     
+        - SyncSwap: Delete LP, Swap OT -> ETH     
+        - SpaceFi: Withdraw LP, Delete LP, Swap USDC -> ETH     
+        - SpaceFi: Withdraw LP, Delete LP, Swap SPACE -> ETH     
         - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH     
 3. ВСЕ ФУНКЦИИ      
     1. SyncSwap: Swap ETH -> USDC, Create LP    

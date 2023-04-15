@@ -13,13 +13,18 @@ Description of all functions
     6. Withdrawal to OKX wallet from Arbitrum   
 2. RANDOM       
     1. First part of randomization    
-        - SyncSwap: Swap ETH -> USDC, Create LP     
+        - SyncSwap: Swap ETH -> USDC, Create LP ETH/USDC    
+        - SyncSwap: Swap ETH -> OT, Create LP ETH/OT   
         - SpaceFi: Swap ETH -> USDC, Create LP, Deposit LP for farming      
-        - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC     
+        - SpaceFi: Swap ETH -> SPACE, Create LP ETH/SPACE      
+        - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH   
+        - NexonFinance: Deposit ETH, Withdraw ETH       
     2. Second part of randomization    
         - SyncSwap: Delete LP, Swap USDC -> ETH     
-        - SpaceFi: Withdraw LP, Delete LP, Swap ETH -> USDC     
-        - NexonFinance: Repay USDC, Withdraw USDC, Swap USDC -> ETH     
+        - SyncSwap: Delete LP, Swap OT -> ETH     
+        - SpaceFi: Withdraw LP, Delete LP, Swap USDC -> ETH     
+        - SpaceFi: Withdraw LP, Delete LP, Swap SPACE -> ETH     
+        - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH     
 3. ALL FUNCTIONS      
     1. SyncSwap: Exchange ETH -> USDC, create LP    
     2. SyncSwap: Delete LP, exchange USDC -> ETH    
