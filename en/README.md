@@ -28,7 +28,9 @@ Description of all functions
     5. NexonFinance: Exchange ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Exchange USDC -> ETH.    
     6. NexonFinance: ETH Deposit, ETH Withdrawal      
     7. SpaceFi: Exchange ETH -> USDC, create LP, replenish LP for farming     
-    8. SpaceFi: Withdraw LP, Delete LP, Exchange ETH -> USDC    
+    8. SpaceFi: Withdraw LP, Delete LP, Exchange USDC -> ETH    
+    9. SpaceFi: Exchange ETH -> SPACE, create LP     
+    10. SpaceFi: Delete LP, Exchange SPACE -> ETH    
 4. OTHER    
     1. Ethereum/ZkSync balance check    
     

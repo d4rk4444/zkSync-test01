@@ -53,7 +53,6 @@ consoleStamp(console, { format: ':date(HH:MM:ss)' });
 consoleStamp(logger, { format: ':date(yyyy/mm/dd HH:MM:ss)', stdout: output });
 
 const pauseTime = generateRandomAmount(process.env.TIMEOUT_ACTION_SEC_MIN * 1000, process.env.TIMEOUT_ACTION_SEC_MAX * 1000, 0);
-const pauseWalletTime = generateRandomAmount(process.env.TIMEOUT_WALLET_SEC_MIN * 1000, process.env.TIMEOUT_WALLET_SEC_MAX * 1000, 0);
 const slippage = generateRandomAmount(1 - process.env.SLIPPAGE_MIN / 100, 1 - process.env.SLIPPAGE_MAX / 100, 3);
 
 
@@ -775,6 +774,215 @@ const spaceFiEnd = async(privateKey) => {
     return true;
 }
 
+const spaceFiStartSPACE = async(privateKey) => {
+    console.log(chalk.cyan('Start SpaceFi SPACE'));
+    logger.log('Start SpaceFi SPACE');
+    const address = privateToAddress(privateKey);
+    const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
+
+    let isReady;
+    while(!isReady) {
+        //SWAP ETH -> SPACE
+        console.log(chalk.yellow(`Swap ETH -> SPACE`));
+        logger.log(`Swap ETH -> SPACE`);
+        try {
+            await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.SPACE, amountETH, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
+                });
+            });
+        } catch (err) {
+            logger.log(err.message);
+            console.log(err.message);
+            await timeout(pauseTime);
+        }
+            
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(res) => {
+            if (res == 0) {
+                console.log(chalk.red(`Error Swap ETH -> SPACE, try again`));
+                logger.log(`Error Swap ETH -> SPACE, try again`);
+            } else if (res > 0) {
+                isReady = true;
+                console.log(chalk.magentaBright(`Swap ETH -> SPACE Successful`));
+                logger.log(`Swap ETH -> SPACE Successful`);
+                await timeout(pauseTime);
+            }
+        });
+    }
+
+    isReady = false;
+    while(!isReady) {
+        //APPROVE SPACE
+        console.log(chalk.yellow(`Approve SPACE`));
+        logger.log(`Approve SPACE`);
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.SPACE, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve SPACE for Space Router`));
+                    logger.log(`Start Approve SPACE for Space Router`);
+                    try {
+                        await dataApprove(info.rpc, info.SPACE, info.SpaceRouter, address).then(async(res1) => {
+                            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SPACE, null, res1.encodeABI, privateKey);
+                            });
+                        });
+                    } catch (err) {
+                        logger.log(err.message);
+                        console.log(err.message);
+                        await timeout(pauseTime);
+                    }
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve SPACE Successful`));
+                    logger.log(`Approve SPACE Successful`);
+                    await timeout(pauseTime);
+                }
+            });
+        });
+    }
+
+    isReady = false;
+    while(!isReady) {
+        //ADD LIQUIDITY ETH/SPACE
+        console.log(chalk.yellow(`Space Add Liqidity ETH/SPACE`));
+        logger.log(`Space Add Liqidity ETH/SPACE`);
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
+            try {
+                await dataSpaceAddLiquidityETH(info.rpc, amountSPACE, info.SPACE, address, 0.98).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, res.amountETH, res.encodeABI, privateKey);
+                    });
+                });
+            } catch (err) {
+                logger.log(err.message);
+                console.log(err.message);
+                await timeout(pauseTime);
+            }
+        });
+        
+        await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(res) => {
+            if (res == 0) {
+                console.log(chalk.red(`Error Add Liqidity ETH/SPACE, try again`));
+                logger.log(`Error Add Liqidity ETH/SPACE, try again`);
+            } else if (res > 0) {
+                isReady = true;
+                console.log(chalk.magentaBright(`ETH/SPACE Add Liqidity Successful`));
+                logger.log(`ETH/SPACE Add Liqidity Successful`);
+                await timeout(pauseTime);
+            }
+        });
+    }
+
+    return true;
+}
+
+const spaceFiEndSPACE = async(privateKey) => {
+    console.log(chalk.cyan('Start SpaceFi End SPACE [Delete Liquidity, Swap SPACE -> ETH]'));
+    logger.log('Start SpaceFi End SPACE [Delete Liquidity, Swap SPACE -> ETH]');
+    const address = privateToAddress(privateKey);
+    const checkBalance = await getAmountToken(info.rpc, info.LPPoolSPACE, address);
+    if (checkBalance == 0) {
+        return false;
+    }
+
+    let isReady;
+    while(!isReady) {
+        //APPROVE SPACE LP
+        console.log(chalk.yellow(`Approve Space LP`));
+        logger.log(`Approve Space LP`);
+        await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.LPPoolSPACE, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve ETH/SPACE LP for Space Router`));
+                    logger.log(`Start Approve ETH/SPACE LP for Space Router`);
+                    try {
+                        await dataApprove(info.rpc, info.LPPoolSPACE, info.SpaceRouter, address).then(async(res1) => {
+                            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.LPPoolSPACE, null, res1.encodeABI, privateKey);
+                            });
+                        });
+                    } catch (err) {
+                        logger.log(err.message);
+                        console.log(err.message);
+                        await timeout(pauseTime);
+                    }       
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve ETH/SPACE LP Successful`));
+                    logger.log(`Approve ETH/SPACE LP Successful`);
+                    await timeout(pauseTime);
+                }
+            });
+        });
+    }
+
+    isReady = false;
+    while(!isReady) {
+        //DELETE LIQUIDITY ETH/SPACE
+        console.log(chalk.yellow(`DELETE LIQUIDITY ETH/SPACE`));
+        logger.log(`DELETE LIQUIDITY ETH/SPACE`);
+        await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(amountLP) => {   
+            try {
+                await dataSpaceDeleteLiquidityETH(info.rpc, info.SPACE, amountLP, address, slippage).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
+                    });
+                });
+            } catch (err) {
+                logger.log(err.message);
+                console.log(err.message);
+                await timeout(pauseTime);
+            }        
+        });
+
+        await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(res) => {
+            if (res > 0) {
+                console.log(chalk.red(`Error Delete Liquidity ETH/SPACE LP, try again`));
+                logger.log(`Error Delete Liquidity ETH/SPACE LP, try again`);
+            } else if (res == 0) {
+                isReady = true;
+                console.log(chalk.magentaBright(`Delete Liquidity ETH/SPACE LP Successful`));
+                logger.log(`Delete Liquidity ETH/SPACE LP Successful`);
+                await timeout(pauseTime);
+            }
+        });
+    }
+
+    isReady = false;
+    while(!isReady) {
+        //SWAP SPACE SPACE -> ETH
+        console.log(chalk.yellow(`SWAP SPACE SPACE -> ETH`));
+        logger.log(`SWAP SPACE SPACE -> ETH`);
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
+            try {
+                await dataSpaceSwapTokenToETH(info.rpc, info.SPACE, info.WETH, amountSPACE, address, slippage).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
+                    });
+                });
+            } catch (err) {
+                logger.log(err.message);
+                console.log(err.message);
+                await timeout(pauseTime);
+            }
+        });
+        
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(res) => {
+            if (res > 0) {
+                console.log(chalk.red(`Error Swap Space SPACE -> ETH, try again`));
+                logger.log(`Error Swap Space SPACE -> ETH, try again`);
+            } else if (res == 0) {
+                isReady = true;
+                console.log(chalk.magentaBright(`Swap Space SPACE -> ETH Successful`));
+                logger.log(`Swap Space SPACE -> ETH Successful`);
+                await timeout(pauseTime);
+            }
+        });
+    }
+
+    return true;
+}
+
 const nexonFinanceStart = async(privateKey) => {
     console.log(chalk.cyan('Start Nexon Finance [Swap/Deposit/Borrow/Repay/Withdraw]'));
     logger.log('Start Nexon Finance [Swap/Deposit/Borrow/Repay/Withdraw]');
@@ -1283,17 +1491,33 @@ const getBalanceWallet = async(privateKey) => {
             console.log(`${res / 10**18}ETH`);
             console.log(`${res1 / 10**6}USDC`);
             await getAmountToken(info.rpc, info.LPPool, address).then(async(res2) => {
-                console.log(chalk.cyanBright('SyncSwap'));
+                console.log(chalk.cyanBright('SyncSwap ETH/USDC'));
                 console.log(`${res2 / 10**6}LP`);
+                await getAmountToken(info.rpc, info.OTLPPool, address).then(async(res3) => {
+                    console.log(chalk.cyanBright('SyncSwap ETH/OT'));
+                    console.log(`${res3 / 10**6}LP`);
+                });
             });
             await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(res2) => {
-                console.log(chalk.cyanBright('SpaceFi'));
+                console.log(chalk.cyanBright('SpaceFi ETH/USDC'));
                 console.log(`${res2 / 10**6}LP`);
-                await getAmountBorrow(info.rpc, info.nUSDC, address).then(async(res3) => {
-
+                await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(res3) => {
+                    console.log(chalk.cyanBright('SpaceFi ETH/SPACE'));
+                    console.log(`${res3 / 10**6}LP`);
+                });
+            });
+            await getAmountBorrow(info.rpc, info.nUSDC, address).then(async(res2) => {
+                console.log(chalk.cyanBright('Nexon Deposit USDC/ETH'));
+                console.log(`${res2 / 10**6}nUSDC`);
+                await getAmountBorrow(info.rpc, info.nETH, address).then(async(res3) => {
+                    console.log(`${res3 / 10**6}nETH`);
                 });
             });
         });
+    });
+    await getETHAmount(info.rpcArbitrum, address).then(async(res) => {
+        console.log(chalk.magentaBright('Balance Arbitrum'));
+        console.log(`${res / 10**18}ETH`);
     });
 }
 
@@ -1314,8 +1538,8 @@ const getBalanceWallet = async(privateKey) => {
         'Send to SubWallet Arbitrum'
     ];
     const randomStage = [
-        'SyncSwap USDC [Swap, +LP], SpaceFi [Swap, +LP, +Farming], SyncSwap OT [Swap, +LP], NexonFinance[Swap, Deposit, Borrow, Repay, Withdraw, Swap]',
-        'SyncSwap USDC [-LP, Swap], SpaceFi [-Farming, -LP, Swap], SyncSwap OT [-LP, Swap]',
+        'SyncSwap USDC [Swap, +LP], SpaceFi USDC [Swap, +LP, +Farming], SyncSwap OT [Swap, +LP], SpaceFi SPACE [Swap, +LP], NexonFinance USDC/ETH [Swap, Deposit, Borrow, Repay, Withdraw, Swap]',
+        'SyncSwap USDC [-LP, Swap], SpaceFi USDC [-Farming, -LP, Swap], SyncSwap OT [-LP, Swap], SpaceFi SPACE [-LP, Swap]',
         'Random All [1 action per wallet that can perform]'
     ];
     const allStage = [
@@ -1327,13 +1551,26 @@ const getBalanceWallet = async(privateKey) => {
         'Deposit/Withdraw ETH Nexon Finance',
         'Swap/Add liquidity/Deposit LP to farm SpaceFi',
         'Withdraw LP/Delete liquidity/Swap USDC -> ETH SpaceFi',
+        'Swap/Add liquidity ETH/SPACE SpaceFi',
+        'Delete liquidity/Swap SPACE -> ETH SpaceFi',
     ];
     const otherStage = [
         'View balance address',
     ];
-    const randomPartAll = [syncSwapStart, syncSwapEnd, spaceFiStart, spaceFiEnd, nexonFinanceStart, syncSwapOTStart, syncSwapOTEnd, nexonFinanceETHStart];
-    const randomPartStart = [syncSwapStart, spaceFiStart, nexonFinanceStart, syncSwapOTStart, nexonFinanceETHStart];
-    const randomPartEnd = [syncSwapEnd, spaceFiEnd, syncSwapOTEnd];
+    const randomPartAll = [
+        syncSwapStart,
+        syncSwapEnd,
+        spaceFiStart,
+        spaceFiEnd,
+        nexonFinanceStart,
+        syncSwapOTStart,
+        syncSwapOTEnd,
+        nexonFinanceETHStart,
+        spaceFiStartSPACE,
+        spaceFiEndSPACE
+    ];
+    const randomPartStart = [syncSwapStart, spaceFiStart, nexonFinanceStart, syncSwapOTStart, nexonFinanceETHStart, spaceFiStartSPACE];
+    const randomPartEnd = [syncSwapEnd, spaceFiEnd, syncSwapOTEnd, spaceFiEndSPACE];
 
     const index = readline.keyInSelect(mainStage, 'Choose stage!');
     let index1;
@@ -1366,6 +1603,7 @@ const getBalanceWallet = async(privateKey) => {
     }
     
     for (let i = 0; i < wallet.length; i++) {
+        let pauseWalletTime = generateRandomAmount(process.env.TIMEOUT_WALLET_SEC_MIN * 1000, process.env.TIMEOUT_WALLET_SEC_MAX * 1000, 0);
         try {
             console.log(chalk.blue(`Wallet ${i+1}: ${privateToAddress(wallet[i])}`));
             logger.log(`Wallet ${i+1}: ${privateToAddress(wallet[i])}`);
@@ -1425,7 +1663,12 @@ const getBalanceWallet = async(privateKey) => {
             await spaceFiStart(wallet[i]);
         } else if (index3 == 7) {
             await spaceFiEnd(wallet[i]);
+        } else if (index3 == 8) {
+            await spaceFiStartSPACE(wallet[i]);
+        } else if (index3 == 9) {
+            await spaceFiEndSPACE(wallet[i]);
         } else if (index4 == 0) { //OTHER STAGE
+            pauseWalletTime = 0;
             await getBalanceWallet(wallet[i]);
         }
 

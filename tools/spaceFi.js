@@ -83,15 +83,15 @@ export const dataSpaceSwapTokenToETH = async(rpc, tokenA, tokenB, amountIn, send
     return { encodeABI, estimateGas };
 }
 
-export const dataSpaceAddLiquidityETH = async(rpc, amountUSDC, tokenB, sender, slippage) => {
+export const dataSpaceAddLiquidityETH = async(rpc, amountToken, tokenB, sender, slippage) => {
     const w3 = new Web3(new Web3.providers.HttpProvider(rpc));
     const contractSwap = new w3.eth.Contract(spaceFiRouterAbi, info.SpaceRouter);
-    const amountETH = await getAmountsIn(info.rpc, amountUSDC, info.WETH, info.USDC, 1);
+    const amountETH = await getAmountsIn(info.rpc, amountToken, info.WETH, tokenB, 1);
 
     const data = await contractSwap.methods.addLiquidityETH(
         tokenB,
-        w3.utils.numberToHex(amountUSDC),
-        w3.utils.numberToHex(await getAmountsOut(info.rpc, amountETH, info.WETH, info.USDC, slippage)),
+        w3.utils.numberToHex(amountToken),
+        w3.utils.numberToHex(await getAmountsOut(info.rpc, amountETH, info.WETH, tokenB, slippage)),
         w3.utils.numberToHex(parseInt(multiply(amountETH, 0.995))),
         sender,
         Date.now() + 5 * 60 * 1000
@@ -157,12 +157,12 @@ export const getSpaceAmountETHLiquidity = async(rpc, tokenB, amountLP, slippage)
 export const dataSpaceDeleteLiquidityETH = async(rpc, addressToken, amountLP, sender, slippage) => {
     const w3 = new Web3(new Web3.providers.HttpProvider(rpc));
     const contract = new w3.eth.Contract(spaceFiRouterAbi, info.SpaceRouter);
-    const amountETH = await getSpaceAmountETHLiquidity(rpc, info.USDC, amountLP, slippage);
+    const amountETH = await getSpaceAmountETHLiquidity(rpc, addressToken, amountLP, slippage);
 
     const data = await contract.methods.removeLiquidityETH(
         addressToken,
         w3.utils.numberToHex(amountLP),
-        w3.utils.numberToHex(await getAmountsIn(info.rpc, amountETH, info.USDC, info.WETH, slippage)),
+        w3.utils.numberToHex(await getAmountsIn(rpc, amountETH, addressToken, info.WETH, slippage)),
         w3.utils.numberToHex(amountETH),
         sender,
         Date.now() + 5 * 60 * 1000,

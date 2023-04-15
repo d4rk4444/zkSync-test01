@@ -28,7 +28,9 @@
     5. NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH    
     6. NexonFinance: Deposit ETH, Withdraw ETH      
     7. SpaceFi: Swap ETH -> USDC, Create LP, Deposit LP for farming     
-    8. SpaceFi: Withdraw LP, Delete LP, Swap ETH -> USDC    
+    8. SpaceFi: Withdraw LP, Delete LP, Swap USDC -> ETH    
+    9. SpaceFi: Swap ETH -> SPACE, Create LP     
+    10. SpaceFi: Delete LP, Swap SPACE -> ETH    
 4. ОСТАЛЬНЫЕ
     1. Проверка баланса Ethereum/ZkSync
     
