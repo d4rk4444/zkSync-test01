@@ -1978,7 +1978,8 @@ const getBalanceWallet = async(privateKey) => {
     const randomStage = [
         'SyncSwap USDC [Swap, +LP], SpaceFi USDC [Swap, +LP, +Farming], SyncSwap OT [Swap, +LP], SpaceFi SPACE [Swap, +LP], NexonFinance USDC/ETH [Swap, Deposit, Borrow, Repay, Withdraw, Swap]',
         'SyncSwap USDC [-LP, Swap], SpaceFi USDC [-Farming, -LP, Swap], SyncSwap OT [-LP, Swap], SpaceFi SPACE [-LP, Swap]',
-        'Random All [1 action per wallet that can perform]'
+        'Random All [1 action per wallet]',
+        'Random Without Liquidity | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] 1 action per wallet'
     ];
     const allStage = [
         'Swap ETH to USDC/Add liquidity SyncSwap',
@@ -2013,6 +2014,7 @@ const getBalanceWallet = async(privateKey) => {
     ];
     const randomPartStart = [syncSwapStart, spaceFiStart, nexonFinanceStart, syncSwapOTStart, nexonFinanceETHStart, spaceFiStartSPACE];
     const randomPartEnd = [syncSwapEnd, spaceFiEnd, syncSwapOTEnd, spaceFiEndSPACE];
+    const randomPartWithoutLiq = [syncSwapOTWithoutLiq, syncSwapWithoutLiq, spaceFiSPACEWithoutLiq, spaceFiWithoutLiq];
 
     const index = readline.keyInSelect(mainStage, 'Choose stage!');
     let index1;
@@ -2091,6 +2093,9 @@ const getBalanceWallet = async(privateKey) => {
                     }
                 });
             }
+        } else if (index2 == 3) {
+            shuffle(randomPartWithoutLiq);
+            await randomPartWithoutLiq[0](wallet[i]);
         } else if (index3 == 0) { //ALL FUNCTION
             await syncSwapStart(wallet[i]);
         } else if (index3 == 1) {
