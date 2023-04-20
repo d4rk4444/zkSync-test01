@@ -7,10 +7,11 @@ Description of all functions
 1. BRIDGE       
     1. Bridge Ethereum -> ZkSync in amount     
     2. Ethereum -> ZkSync bridge in percentage      
-    3. Bridge ZkSync -> Ethereum in percentage  
-    4. Мост ZkSync -> Arbitrum в процентах
-    5. Withdrawal to OKX wallet from Ethereum     
-    6. Withdrawal to OKX wallet from Arbitrum   
+    3. Arbitrum -> ZkSync bridge in percentage      
+    4. Bridge ZkSync -> Ethereum in percentage  
+    5. Мост ZkSync -> Arbitrum в процентах
+    6. Withdrawal to OKX wallet from Ethereum     
+    7. Withdrawal to OKX wallet from Arbitrum   
 2. RANDOM       
     1. First part of randomization    
         - SyncSwap: Swap ETH -> USDC, Create LP ETH/USDC    
@@ -25,6 +26,8 @@ Description of all functions
         - SpaceFi: Withdraw LP, Delete LP, Swap USDC -> ETH     
         - SpaceFi: Withdraw LP, Delete LP, Swap SPACE -> ETH     
         - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH     
+    3. Random of all functions, 1 action per wallet (If an action to break an LP is rolled, and it is not there, then another action is chosen)      
+    4. Random functions without added liquidity SyncSwap USDC/OT, SpaceFi USDC/SPACE, 1 action per wallet       
 3. ALL FUNCTIONS      
     1. SyncSwap: Exchange ETH -> USDC, create LP    
     2. SyncSwap: Delete LP, exchange USDC -> ETH    
@@ -37,7 +40,11 @@ Description of all functions
     9. SpaceFi: Exchange ETH -> SPACE, create LP     
     10. SpaceFi: Delete LP, Exchange SPACE -> ETH    
 4. OTHER    
-    1. Ethereum/ZkSync balance check    
+    1. SyncSwap: Swap ETH -> USDC -> ETH    
+    2. SyncSwap: Swap ETH -> OT -> ETH    
+    3. SpaceFi: Swap ETH -> USDC -> ETH    
+    4. SpaceFi: Swap ETH -> SPACE -> ETH    
+    5. Ethereum/ZkSync/Arbitrum balance check    
     
 ## Setup    
 ``` 

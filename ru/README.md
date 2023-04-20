@@ -6,11 +6,12 @@
 
 1. МОСТ     
     1. Мост Ethereum -> ZkSync в количестве     
-    2. Мост Ethereum -> ZkSync в процентах      
-    3. Мост ZkSync -> Ethereum в процентах      
-    4. Мост ZkSync -> Arbitrum в процентах      
-    5. Вывод на кошелек OKX c Ethereum    
-    6. Вывод на кошелек OKX c Arbitrum     
+    2. Мост Ethereum -> ZkSync в процентах   
+    3. Мост Arbitrum -> ZkSync в процентах      
+    4. Мост ZkSync -> Ethereum в процентах      
+    5. Мост ZkSync -> Arbitrum в процентах      
+    6. Вывод на кошелек OKX c Ethereum    
+    7. Вывод на кошелек OKX c Arbitrum     
 2. РАНДОМ       
     1. Первая часть рандомизации    
         - SyncSwap: Swap ETH -> USDC, Create LP ETH/USDC    
@@ -25,6 +26,8 @@
         - SpaceFi: Withdraw LP, Delete LP, Swap USDC -> ETH     
         - SpaceFi: Withdraw LP, Delete LP, Swap SPACE -> ETH     
         - NexonFinance: Swap ETH -> USDC, Deposit USDC, Borrow USDC, Repay USDC, Withdraw USDC, Swap USDC -> ETH     
+    3. Рандом всех функций, 1 действие на кошелек (Если выпало действие на разрыв ЛП, а его нет, то выбирается другое)      
+    4. Рандом функций без добавления ликвидности SyncSwap USDC/OT, SpaceFi USDC/SPACE, 1 действие на кошелек        
 3. ВСЕ ФУНКЦИИ      
     1. SyncSwap: Swap ETH -> USDC, Create LP    
     2. SyncSwap: Delete LP, Swap USDC -> ETH    
@@ -37,7 +40,11 @@
     9. SpaceFi: Swap ETH -> SPACE, Create LP     
     10. SpaceFi: Delete LP, Swap SPACE -> ETH    
 4. ОСТАЛЬНЫЕ
-    1. Проверка баланса Ethereum/ZkSync
+    1. SyncSwap: Swap ETH -> USDC -> ETH    
+    2. SyncSwap: Swap ETH -> OT -> ETH    
+    3. SpaceFi: Swap ETH -> USDC -> ETH    
+    4. SpaceFi: Swap ETH -> SPACE -> ETH    
+    5. Проверка баланса Ethereum/ZkSync/Arbitrum
     
 ## Установка
 ```
