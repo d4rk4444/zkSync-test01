@@ -1522,6 +1522,7 @@ const nexonFinanceStart = async(privateKey) => {
         logger.log(`SUPPLY USDC`);
         try {
             await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                amountUSDC = parseInt(amountUSDC / 10**5) * 10**5;
                 await dataSupplyNexon(info.rpc, info.nUSDC, amountUSDC, address).then(async(res) => {
                     await getGasPrice(info.rpc).then(async(gasPrice) => {
                         await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
@@ -1555,7 +1556,7 @@ const nexonFinanceStart = async(privateKey) => {
         try {
             await getAmountDeposit(info.rpc, info.nUSDC, address).then(async(amountUSDC) => {
                 const supplyBorrow = parseFloat((1 - generateRandomAmount(1 - process.env.SLIPPAGE_BORROW_MIN / 100, 1 - process.env.SLIPPAGE_BORROW_MAX / 100, 2))).toFixed(2);
-                amountUSDC = parseInt(amountUSDC * supplyBorrow);
+                amountUSDC = parseInt(amountUSDC * supplyBorrow / 10**5) * 10**5;
                 await dataBorrowNexon(info.rpc, info.nUSDC, amountUSDC, address).then(async(res) => {
                     await getGasPrice(info.rpc).then(async(gasPrice) => {
                         await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
@@ -1595,7 +1596,7 @@ const nexonFinanceStart = async(privateKey) => {
                 });
             });
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
+            await getAmountBorrow(info.rpc, info.nUSDC, address).then(async(res) => {
                 if (res > 0) {
                     console.log(chalk.red(`Error Repay USDC, try again`));
                     logger.log(`Error Repay USDC, try again`);
@@ -1979,7 +1980,8 @@ const getBalanceWallet = async(privateKey) => {
         'SyncSwap USDC [Swap, +LP], SpaceFi USDC [Swap, +LP, +Farming], SyncSwap OT [Swap, +LP], SpaceFi SPACE [Swap, +LP], NexonFinance USDC/ETH [Swap, Deposit, Borrow, Repay, Withdraw, Swap]',
         'SyncSwap USDC [-LP, Swap], SpaceFi USDC [-Farming, -LP, Swap], SyncSwap OT [-LP, Swap], SpaceFi SPACE [-LP, Swap]',
         'Random All [1 action per wallet]',
-        'Random Without Liquidity | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] 1 action per wallet'
+        'Random Without Liquidity | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] 1 action per wallet',
+        'Random Without Liquidity | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] RANDOM Number of Actions per wallet'
     ];
     const allStage = [
         'Swap ETH to USDC/Add liquidity SyncSwap',
@@ -2096,6 +2098,12 @@ const getBalanceWallet = async(privateKey) => {
         } else if (index2 == 3) {
             shuffle(randomPartWithoutLiq);
             await randomPartWithoutLiq[0](wallet[i]);
+        } else if (index2 == 4) {
+            shuffle(randomPartWithoutLiq);
+            const numberAction = generateRandomAmount(1, randomPartWithoutLiq.length, 0);
+            for (let i = 0; i < numberAction; i++) {
+                await randomPartWithoutLiq[generateRandomAmount(0, randomPartWithoutLiq.length - 1, 0)](wallet[i]);
+            }
         } else if (index3 == 0) { //ALL FUNCTION
             await syncSwapStart(wallet[i]);
         } else if (index3 == 1) {
