@@ -705,7 +705,7 @@ const syncSwapOTWithoutLiq = async(privateKey) => {
 
 const syncSwapETHToUSDC = async(privateKey) => {
     const address = privateToAddress(privateKey);
-    const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
+    const random = generateRandomAmount(process.env.ETH_SWAP_PERCENT_MIN / 100, process.env.ETH_SWAP_PERCENT_MAX / 100, 3);
 
     let isReady;
     while(!isReady) {
@@ -713,9 +713,12 @@ const syncSwapETHToUSDC = async(privateKey) => {
         console.log(chalk.yellow(`Swap ETH -> USDC`));
         logger.log(`Swap ETH -> USDC`);
         try {
-            await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+            await getETHAmount(info.rpc, address).then(async(amountETH) => {
+                amountETH = parseInt(multiply(amountETH, random));
+                await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+                    });
                 });
             });
 
