@@ -38,6 +38,7 @@ export const info = {
     SpaceFactory: '0x0700Fb51560CfC8F896B2c812499D17c5B0bF6A7',
     SpaceLPPool: '0xD0cE094412898760C2A5e37AbeC39b0E785b45aE',
     SpaceFarmer: '0xaCF5a67f2fCFEDA3946ccb1ad9d16d2Eb65c3c96',
+    NameService: '0x935442AF47F3dc1c11F006D551E13769F12eab13',
     approveAmount: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
 }
 

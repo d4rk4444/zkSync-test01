@@ -38,13 +38,17 @@
     7. SpaceFi: Swap ETH -> USDC, Create LP, Deposit LP for farming     
     8. SpaceFi: Withdraw LP, Delete LP, Swap USDC -> ETH    
     9. SpaceFi: Swap ETH -> SPACE, Create LP     
-    10. SpaceFi: Delete LP, Swap SPACE -> ETH    
-4. ОСТАЛЬНЫЕ
+    10. SpaceFi: Delete LP, Swap SPACE -> ETH
+4. НФТ     
+    1. Регистрация домена c разными комбинациями .era 0.003ETH      
+5. ОСТАЛЬНЫЕ
     1. SyncSwap: Swap ETH -> USDC -> ETH    
     2. SyncSwap: Swap ETH -> OT -> ETH    
     3. SpaceFi: Swap ETH -> USDC -> ETH    
     4. SpaceFi: Swap ETH -> SPACE -> ETH    
-    5. Проверка баланса Ethereum/ZkSync/Arbitrum
+    5. SyncSwap Swap ETH -> USDC [Random in config]     
+    6. SyncSwap Swap All USDC -> ETH        
+    7. Проверка баланса Ethereum/ZkSync/Arbitrum    
     
 ## Установка
 ```
@@ -61,10 +65,11 @@ npm i
 3. Цена газа для моста Ethereum -> ZkSync   
 4. Кол-во ETH для моста Ethereum -> ZkSync в Процентах  
 5. Кол-во ETH для моста Ethereum -> ZkSync в Эфире  
-6. Кол-во ETH для обмена во всех действиях  
-7. Проскальзывание для займа в NexonFinance 
-8. Проскальзывание для обмена/ликвидности в Процентах   
-9. Кол-во ETH для моста ZkSync -> Ethereum в Процентах  
+6. Кол-во ETH для обмена во всех действиях 
+7. Значение в % для функции OTHER - 5 [SyncSwap Swap ETH -> USDC]   
+8. Проскальзывание для займа в NexonFinance     
+9. Проскальзывание для обмена/ликвидности в Процентах   
+10. Кол-во ETH для моста ZkSync -> Ethereum в Процентах      
 
 В файл private.txt вставляете приватные адреса в таком формате:     
 ```

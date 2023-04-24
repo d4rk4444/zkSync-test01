@@ -3106,3 +3106,20 @@ export const spaceFiRouterAbi = [
       ]
   },
 ]
+
+export const nameServiceAbi = [
+    {
+        "type":"function",
+        "name":"resolveAddress",
+        "inputs": [{"name":"","type":"string"}],
+        "outputs": [{"name":"","type":"address"}]
+    },
+    {
+        "type":"function",
+        "name":"Register",
+        "inputs": [
+          {"name":"","type":"string"}
+        ],
+        "outputs": []
+    },
+]

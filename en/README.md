@@ -39,12 +39,16 @@ Description of all functions
     8. SpaceFi: Withdraw LP, Delete LP, Exchange USDC -> ETH    
     9. SpaceFi: Exchange ETH -> SPACE, create LP     
     10. SpaceFi: Delete LP, Exchange SPACE -> ETH    
-4. OTHER    
+4. NFT     
+    1. Domain registration with different combinations .era 0.003ETH      
+5. OTHER    
     1. SyncSwap: Swap ETH -> USDC -> ETH    
     2. SyncSwap: Swap ETH -> OT -> ETH    
     3. SpaceFi: Swap ETH -> USDC -> ETH    
     4. SpaceFi: Swap ETH -> SPACE -> ETH    
-    5. Ethereum/ZkSync/Arbitrum balance check    
+    5. SyncSwap Swap ETH -> USDC [Random in config]     
+    6. SyncSwap Swap All USDC -> ETH    
+    7. Ethereum/ZkSync/Arbitrum balance check    
     
 ## Setup    
 ``` 
@@ -62,9 +66,10 @@ All the settings you need are in the .env file
 4. Amount of ETH for the bridge Ethereum -> ZkSync in Percentage  
 5. Amount of ETH for the bridge Ethereum -> ZkSync in Ether  
 6. ETH amount for exchange in all actions  
-7. Slippage for the loan in NexonFinance 
-8. Slippage for exchange/liquidity in Percentages   
-9. ETH amount for ZkSync -> Ethereum bridge in Percentages  
+7. Value in % for the function OTHER - 5 [SyncSwap Swap ETH -> USDC]   
+8. Slippage for the loan in NexonFinance 
+9. Slippage for exchange/liquidity in Percentages   
+10. ETH amount for ZkSync -> Ethereum bridge in Percentages  
 
 In the private.txt file insert private addresses in this format:     
 ```

@@ -39,6 +39,7 @@ import {
     getSpaceFarmAmount,
     dataSpaceWithdraw,
     dataSpaceDeleteLiquidityETH  } from './tools/spaceFi.js';
+import { generateRandomName, dataRegisterName } from './tools/nft.js';
 import { subtract, multiply, divide, composition, add, number } from 'mathjs';
 import fs from 'fs';
 import readline from 'readline-sync';
@@ -1952,6 +1953,33 @@ const bridgeETHToEthereum = async(privateKey) => {
     await timeout(pauseTime);
 }
 
+const registerName = async(privateKey) => {
+    const address = privateToAddress(privateKey);
+
+    let isReady;
+    while(!isReady) {
+        //REGISTER NAME .ERA
+        
+        try {
+            await generateRandomName().then(async(name) => {
+                console.log(chalk.magentaBright(`Name: ${name}.era`));
+                logger.log(`Name: ${name}.era`);
+                await dataRegisterName(info.rpc, name, address).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.NameService, 3 * 10**15, res.encodeABI, privateKey);
+                        isReady = true;
+                    });
+                });
+                await timeout(pauseTime);
+            });
+        } catch (err) {
+            logger.log(err.message);
+            console.log(err.message);
+            await timeout(pauseTime);
+        }   
+    }
+}
+
 const withdrawETHToSubWallet = async(toAddress, privateKey) => {
     const addressEthereum = privateToAddress(privateKey);
 
@@ -2070,6 +2098,7 @@ const getBalanceWallet = async(privateKey) => {
         'BRIDGE',
         'RANDOM',
         'ALL FUNC',
+        'NFT',
         'OTHER'
     ];
     const bridgeStage = [
@@ -2099,6 +2128,9 @@ const getBalanceWallet = async(privateKey) => {
         'Withdraw LP/Delete liquidity/Swap USDC -> ETH SpaceFi',
         'Swap/Add liquidity ETH/SPACE SpaceFi',
         'Delete liquidity/Swap SPACE -> ETH SpaceFi',
+    ];
+    const nftStage = [
+        'Register Random name.era 0.003ETH',
     ];
     const otherStage = [
         'SyncSwap ETH <-> USDC Without adding liquidity',
@@ -2130,6 +2162,7 @@ const getBalanceWallet = async(privateKey) => {
     let index2;
     let index3;
     let index4;
+    let index5;
     if (index == -1) { process.exit() };
     console.log(chalk.green(`Start ${mainStage[index]}`));
     logger.log(`Start ${mainStage[index]}`);
@@ -2149,10 +2182,15 @@ const getBalanceWallet = async(privateKey) => {
         console.log(chalk.green(`Start ${allStage[index3]}`));
         logger.log(`Start ${allStage[index3]}`);
     } else if (index == 3) {
-        index4 = readline.keyInSelect(otherStage, 'Choose stage!');
+        index4 = readline.keyInSelect(nftStage, 'Choose stage!');
         if (index4 == -1) { process.exit() };
-        console.log(chalk.green(`Start ${otherStage[index4]}`));
-        logger.log(`Start ${otherStage[index4]}`);
+        console.log(chalk.green(`Start ${nftStage[index4]}`));
+        logger.log(`Start ${nftStage[index4]}`);
+    } else if (index == 4) {
+        index5 = readline.keyInSelect(otherStage, 'Choose stage!');
+        if (index5 == -1) { process.exit() };
+        console.log(chalk.green(`Start ${otherStage[index5]}`));
+        logger.log(`Start ${otherStage[index5]}`);
     }
     
     for (let i = 0; i < wallet.length; i++) {
@@ -2231,19 +2269,21 @@ const getBalanceWallet = async(privateKey) => {
             await spaceFiStartSPACE(wallet[i]);
         } else if (index3 == 9) {
             await spaceFiEndSPACE(wallet[i]);
-        } else if (index4 == 0) { //OTHER STAGE
+        } else if (index4 == 0) { //NFT STAGE
+            await registerName(wallet[i]);
+        } else if (index5 == 0) { //OTHER STAGE
             await syncSwapWithoutLiq(wallet[i]);
-        } else if (index4 == 1) {
+        } else if (index5 == 1) {
             await syncSwapOTWithoutLiq(wallet[i]);
-        } else if (index4 == 2) {
+        } else if (index5 == 2) {
             await spaceFiWithoutLiq(wallet[i]);
-        } else if (index4 == 3) {
+        } else if (index5 == 3) {
             await spaceFiSPACEWithoutLiq(wallet[i]);
-        } else if (index4 == 4) {
+        } else if (index5 == 4) {
             await syncSwapETHToUSDC(wallet[i]);
-        } else if (index4 == 5) {
+        } else if (index5 == 5) {
             await syncSwapUSDCToETH(wallet[i]);
-        } else if (index4 == 6) {
+        } else if (index5 == 6) {
             pauseWalletTime = 0;
             await getBalanceWallet(wallet[i]);
         }
