@@ -6,18 +6,14 @@ export const generateRandomName = async() => {
     const words = parseFile('./tools/words.txt');
     let word = words[generateRandomAmount(0, words.length - 1, 0)];
 
-    const random = generateRandomAmount(0, 1, 0);
+    const random = generateRandomAmount(0, 2, 0);
     let number = 0;
     if (random == 0) {
-        for (let i = 0; i < generateRandomAmount(1, 5, 0); i++) {
-            number = number + generateRandomAmount(0, 10, 0);
-            word = word + number;
-        }
-    } else {
-        for (let i = 0; i < generateRandomAmount(1, 5, 0); i++) {
-            number = number + generateRandomAmount(0, 10, 0);
-            word = number + word;
-        }
+        number = generateRandomAmount(0, 9, 0);
+        word = word + number;
+    } else if (random == 1) {
+        number = generateRandomAmount(0, 9, 0);
+        word = number + word;
     }
 
     return word;
