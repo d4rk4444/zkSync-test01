@@ -2246,7 +2246,7 @@ const getBalanceWallet = async(privateKey) => {
         } else if (index2 == 4) {
             shuffle(randomPartWithoutLiq);
             const numberAction = generateRandomAmount(1, randomPartWithoutLiq.length, 0);
-            for (let n = 0; n < numberAction; i++) {
+            for (let n = 0; n < numberAction; n++) {
                 await randomPartWithoutLiq[generateRandomAmount(0, randomPartWithoutLiq.length - 1, 0)](wallet[i]);
             }
         } else if (index3 == 0) { //ALL FUNCTION
