@@ -498,7 +498,7 @@ const syncSwapOTEnd = async(privateKey) => {
     return true;
 }
 
-const syncSwapWithoutLiq = async(privateKey) => {
+const syncSwapWithoutLiq = async(privateKey, swapBack) => {
     console.log(chalk.cyan('Start SyncSwap Without Liquidity'));
     logger.log('Start SyncSwap Without Liquidity');
     const address = privateToAddress(privateKey);
@@ -565,35 +565,37 @@ const syncSwapWithoutLiq = async(privateKey) => {
         }
     }
 
-    isReady = false;
-    while(!isReady) {
-        //SWAP USDC -> ETH
-        console.log(chalk.yellow(`SWAP USDC -> ETH`));
-        logger.log(`SWAP USDC -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                    await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
-                        await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+    if (swapBack) {
+        isReady = false;
+        while(!isReady) {
+            //SWAP USDC -> ETH
+            console.log(chalk.yellow(`SWAP USDC -> ETH`));
+            logger.log(`SWAP USDC -> ETH`);
+            try {
+                await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                        await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
+                            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+                            });
                         });
-                    });
-            });
+                });
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
-                    logger.log(`Error Swap USDC -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
-                    logger.log(`Swap USDC -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
+                await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
+                    if (res > 0) {
+                        console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
+                        logger.log(`Error Swap USDC -> ETH, try again`);
+                    } else if (res == 0) {
+                        isReady = true;
+                        console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
+                        logger.log(`Swap USDC -> ETH Successful`);
+                        await timeout(pauseTime);
+                    }
+                });
+            } catch (err) {
+                logger.log(err.message);
+                console.log(err.message);
+                await timeout(pauseTime);
+            }
         }
     }
     
@@ -1322,7 +1324,7 @@ const spaceFiEndSPACE = async(privateKey) => {
     return true;
 }
 
-const spaceFiWithoutLiq = async(privateKey) => {
+const spaceFiWithoutLiq = async(privateKey, swapBack) => {
     console.log(chalk.cyan('Start SpaceFi Without Liquidity'));
     logger.log('Start SpaceFi Without Liquidity');
     const address = privateToAddress(privateKey);
@@ -1389,38 +1391,39 @@ const spaceFiWithoutLiq = async(privateKey) => {
         }
     }
 
-    isReady = false;
-    while(!isReady) {
-        //SWAP SPACE USDC -> ETH
-        console.log(chalk.yellow(`SWAP SPACE USDC -> ETH`));
-        logger.log(`SWAP SPACE USDC -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                await dataSpaceSwapTokenToETH(info.rpc, info.USDC, info.WETH, amountUSDC, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
+    if (swapBack) {
+        isReady = false;
+        while(!isReady) {
+            //SWAP SPACE USDC -> ETH
+            console.log(chalk.yellow(`SWAP SPACE USDC -> ETH`));
+            logger.log(`SWAP SPACE USDC -> ETH`);
+            try {
+                await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                    await dataSpaceSwapTokenToETH(info.rpc, info.USDC, info.WETH, amountUSDC, address, slippage).then(async(res) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
+                        });
                     });
                 });
-            });
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap Space USDC -> ETH, try again`));
-                    logger.log(`Error Swap Space USDC -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap Space USDC -> ETH Successful`));
-                    logger.log(`Swap Space USDC -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
+                await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
+                    if (res > 0) {
+                        console.log(chalk.red(`Error Swap Space USDC -> ETH, try again`));
+                        logger.log(`Error Swap Space USDC -> ETH, try again`);
+                    } else if (res == 0) {
+                        isReady = true;
+                        console.log(chalk.magentaBright(`Swap Space USDC -> ETH Successful`));
+                        logger.log(`Swap Space USDC -> ETH Successful`);
+                        await timeout(pauseTime);
+                    }
+                });
+            } catch (err) {
+                logger.log(err.message);
+                console.log(err.message);
+                await timeout(pauseTime);
+            }
         }
     }
-
 
     return true;
 }
@@ -1528,7 +1531,7 @@ const spaceFiSPACEWithoutLiq = async(privateKey) => {
     return true;
 }
 
-const nexonFinanceStart = async(privateKey) => {
+const nexonFinanceStart = async(privateKey, swapBack) => {
     console.log(chalk.cyan('Start Nexon Finance [Swap/Deposit/Borrow/Repay/Withdraw]'));
     logger.log('Start Nexon Finance [Swap/Deposit/Borrow/Repay/Withdraw]');
     const address = privateToAddress(privateKey);
@@ -1783,35 +1786,37 @@ const nexonFinanceStart = async(privateKey) => {
         }  
     }
 
-    isReady = false;
-    while(!isReady) {
-        //SWAP USDC -> ETH
-        console.log(chalk.yellow(`SWAP USDC -> ETH`));
-        logger.log(`SWAP USDC -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                    await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
-                        await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+    if (swapBack) {
+        isReady = false;
+        while(!isReady) {
+            //SWAP USDC -> ETH
+            console.log(chalk.yellow(`SWAP USDC -> ETH`));
+            logger.log(`SWAP USDC -> ETH`);
+            try {
+                await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                        await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
+                            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+                            });
                         });
-                    });
-            });
+                });
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
-                    logger.log(`Error Swap USDC -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
-                    logger.log(`Swap USDC -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
+                await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
+                    if (res > 0) {
+                        console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
+                        logger.log(`Error Swap USDC -> ETH, try again`);
+                    } else if (res == 0) {
+                        isReady = true;
+                        console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
+                        logger.log(`Swap USDC -> ETH Successful`);
+                        await timeout(pauseTime);
+                    }
+                });
+            } catch (err) {
+                logger.log(err.message);
+                console.log(err.message);
+                await timeout(pauseTime);
+            }
         }
     }
 
@@ -2114,8 +2119,10 @@ const getBalanceWallet = async(privateKey) => {
         'SyncSwap USDC [Swap, +LP], SpaceFi USDC [Swap, +LP, +Farming], SyncSwap OT [Swap, +LP], SpaceFi SPACE [Swap, +LP], NexonFinance USDC/ETH [Swap, Deposit, Borrow, Repay, Withdraw, Swap]',
         'SyncSwap USDC [-LP, Swap], SpaceFi USDC [-Farming, -LP, Swap], SyncSwap OT [-LP, Swap], SpaceFi SPACE [-LP, Swap]',
         'Random All [1 action per wallet]',
-        'Random Without Liquidity | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] 1 action per wallet',
-        'Random Without Liquidity | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] RANDOM Number of Actions per wallet'
+        'Random Without LP | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] 1 act per wallet',
+        'Random Without LP | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] 1 act per wallet WITHOUT SWAP USDC -> ETH!!!',
+        'Random Without LP | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] RANDOM All of Act per wallet',
+        'Random Without LP | SyncSwap [USDC/OT], SpaceFi [USDC/SPACE] RANDOM All of Act per wallet WITHOUT SWAP USDC -> ETH!!!'
     ];
     const allStage = [
         'Swap ETH to USDC/Add liquidity SyncSwap',
@@ -2133,10 +2140,10 @@ const getBalanceWallet = async(privateKey) => {
         'Register Random name.era 0.003ETH',
     ];
     const otherStage = [
-        'SyncSwap ETH <-> USDC Without adding liquidity',
-        'SyncSwap ETH <-> OT Without adding liquidity',
-        'SpaceFi ETH <-> USDC Without adding liquidity',
-        'SpaceFi ETH <-> SPACE Without adding liquidity',
+        'SyncSwap ETH <-> USDC Without adding LP',
+        'SyncSwap ETH <-> OT Without adding LP',
+        'SpaceFi ETH <-> USDC Without adding LP',
+        'SpaceFi ETH <-> SPACE Without adding LP',
         'SyncSwap Swap ETH -> USDC [Random in config]',
         'SyncSwap Swap All USDC -> ETH',
         'View balance address',
@@ -2219,7 +2226,7 @@ const getBalanceWallet = async(privateKey) => {
         } else if (index2 == 0) { //RANDOM STAGE
             shuffle(randomPartStart);
             for (let s = 0; s < randomPartStart.length; s++) {
-                await randomPartStart[s](wallet[i]);
+                await randomPartStart[s](wallet[i], true);
             }
         } else if (index2 == 1) {
             shuffle(randomPartEnd);
@@ -2230,7 +2237,7 @@ const getBalanceWallet = async(privateKey) => {
             let isReady;
             while(!isReady) {
                 const random = generateRandomAmount(0, randomPartAll.length - 1, 0);
-                await randomPartAll[random](wallet[i]).then(async(res) => {
+                await randomPartAll[random](wallet[i], true).then(async(res) => {
                     if (res) {
                         isReady = true;
                     } else if (!res) {
@@ -2242,12 +2249,21 @@ const getBalanceWallet = async(privateKey) => {
             }
         } else if (index2 == 3) {
             shuffle(randomPartWithoutLiq);
-            await randomPartWithoutLiq[0](wallet[i]);
+            await randomPartWithoutLiq[0](wallet[i], true);
         } else if (index2 == 4) {
+            shuffle(randomPartWithoutLiq);
+            await randomPartWithoutLiq[0](wallet[i], false);
+        } else if (index2 == 5) {
             shuffle(randomPartWithoutLiq);
             const numberAction = generateRandomAmount(1, randomPartWithoutLiq.length, 0);
             for (let n = 0; n < numberAction; n++) {
-                await randomPartWithoutLiq[generateRandomAmount(0, randomPartWithoutLiq.length - 1, 0)](wallet[i]);
+                await randomPartWithoutLiq[generateRandomAmount(0, randomPartWithoutLiq.length - 1, 0)](wallet[i], true);
+            }
+        } else if (index2 == 6) {
+            shuffle(randomPartWithoutLiq);
+            const numberAction = generateRandomAmount(1, randomPartWithoutLiq.length, 0);
+            for (let n = 0; n < numberAction; n++) {
+                await randomPartWithoutLiq[generateRandomAmount(0, randomPartWithoutLiq.length - 1, 0)](wallet[i], false);
             }
         } else if (index3 == 0) { //ALL FUNCTION
             await syncSwapStart(wallet[i]);
@@ -2258,7 +2274,7 @@ const getBalanceWallet = async(privateKey) => {
         } else if (index3 == 3) {
             await syncSwapOTEnd(wallet[i]);
         } else if (index3 == 4) {
-            await nexonFinanceStart(wallet[i]);
+            await nexonFinanceStart(wallet[i], true);
         } else if (index3 == 5) {
             await nexonFinanceETHStart(wallet[i]);
         } else if (index3 == 6) {
@@ -2272,11 +2288,11 @@ const getBalanceWallet = async(privateKey) => {
         } else if (index4 == 0) { //NFT STAGE
             await registerName(wallet[i]);
         } else if (index5 == 0) { //OTHER STAGE
-            await syncSwapWithoutLiq(wallet[i]);
+            await syncSwapWithoutLiq(wallet[i], true);
         } else if (index5 == 1) {
             await syncSwapOTWithoutLiq(wallet[i]);
         } else if (index5 == 2) {
-            await spaceFiWithoutLiq(wallet[i]);
+            await spaceFiWithoutLiq(wallet[i], true);
         } else if (index5 == 3) {
             await spaceFiSPACEWithoutLiq(wallet[i]);
         } else if (index5 == 4) {
