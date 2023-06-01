@@ -21,7 +21,9 @@ import { dataSwapETHToToken,
     dataAddLiquidity,
     dataDeleteLiquidity, 
     dataAddLiquidityToken,
-    dataDeleteLiquidityToken} from './tools/syncSwap.js';
+    dataDeleteLiquidityToken,
+    dataWrapETH,
+    dataUnwrapETH} from './tools/syncSwap.js';
 import { dataEnterMarkets,
     checkMembership,
     dataSupplyNexon,
@@ -2054,6 +2056,49 @@ const withdrawETHToSubWalletArbitrum = async(toAddress, privateKey) => {
     }
 }
 
+const wrapETHSync = async(privateKey) => {
+    const address = privateToAddress(privateKey);
+    const random = generateRandomAmount(process.env.ETH_SWAP_PERCENT_MIN / 100, process.env.ETH_SWAP_PERCENT_MAX / 100, 3);
+
+    try {
+        await getETHAmount(info.rpc, address).then(async(amountETH) => {
+            amountETH = parseInt(multiply(amountETH, random));
+
+            await dataWrapETH(info.rpc, amountETH, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.WETH, amountETH, res.encodeABI, privateKey);
+                });
+            });
+        });
+    } catch (err) {
+        logger.log(error);
+        console.log(err.message);
+        return;
+    }
+
+    return true;
+}
+
+const unwrapETHSync = async(privateKey) => {
+    const address = privateToAddress(privateKey);
+
+    try {
+        await getAmountToken(info.rpc, info.WETH, address).then(async(amountWETH) => {
+            await dataUnwrapETH(info.rpc, amountWETH, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.WETH, null, res.encodeABI, privateKey);
+                });
+            });
+        });
+    } catch (err) {
+        logger.log(error);
+        console.log(err.message);
+        return;
+    }
+
+    return true;
+}
+
 const getBalanceWallet = async(privateKey) => {
     const address = privateToAddress(privateKey);
 
@@ -2135,6 +2180,8 @@ const getBalanceWallet = async(privateKey) => {
         'Withdraw LP/Delete liquidity/Swap USDC -> ETH SpaceFi',
         'Swap/Add liquidity ETH/SPACE SpaceFi',
         'Delete liquidity/Swap SPACE -> ETH SpaceFi',
+        'Wrap ETH SyncSwap',
+        'Unwrap ETH SyncSwap',
     ];
     const nftStage = [
         'Register Random name.era 0.003ETH',
@@ -2285,6 +2332,10 @@ const getBalanceWallet = async(privateKey) => {
             await spaceFiStartSPACE(wallet[i]);
         } else if (index3 == 9) {
             await spaceFiEndSPACE(wallet[i]);
+        } else if (index3 == 10) {
+            await wrapETHSync(wallet[i]);
+        } else if (index3 == 11) {
+            await unwrapETHSync(wallet[i]);
         } else if (index4 == 0) { //NFT STAGE
             await registerName(wallet[i]);
         } else if (index5 == 0) { //OTHER STAGE

@@ -274,3 +274,27 @@ export const dataDeleteLiquidityToken = async(rpc, addressLP, amountLP, router, 
     const estimateGas = await data.estimateGas({ from: sender });
     return { encodeABI, estimateGas };
 }
+
+export const dataWrapETH = async(rpc, amountETH, sender) => {
+    const w3 = new Web3(new Web3.providers.HttpProvider(rpc));
+    const contract = new w3.eth.Contract(abiToken, info.WETH);
+
+    const data = await contract.methods.deposit();
+
+    const encodeABI = data.encodeABI();
+    const estimateGas = await data.estimateGas({ from: sender, value: amountETH });
+    return { encodeABI, estimateGas };
+}
+
+export const dataUnwrapETH = async(rpc, amount, sender) => {
+    const w3 = new Web3(new Web3.providers.HttpProvider(rpc));
+    const contract = new w3.eth.Contract(abiToken, info.WETH);
+
+    const data = await contract.methods.withdraw(
+        amount
+    );
+
+    const encodeABI = data.encodeABI();
+    const estimateGas = await data.estimateGas({ from: sender });
+    return { encodeABI, estimateGas };
+}

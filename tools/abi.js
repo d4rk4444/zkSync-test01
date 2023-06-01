@@ -44,7 +44,17 @@ export const abiToken = [
           {"name":"spender","type":"address"},
           {"name":"amount","type":"uint256"}
       ]
-  }
+  },
+  {
+      "type":"function",
+      "name":"deposit",
+      "inputs": []
+  },
+  {
+      "type":"function",
+      "name":"withdraw",
+      "inputs": [{"name":"amount","type":"uint256"}]
+  },
 ]
 
 export const bridgeAbi = [
