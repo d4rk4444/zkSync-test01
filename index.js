@@ -780,36 +780,22 @@ const syncSwapUSDCToETH = async(privateKey) => {
         }
     }
 
-    isReady = false;
-    while(!isReady) {
-        //SWAP USDC -> ETH
-        console.log(chalk.yellow(`SWAP USDC -> ETH`));
-        logger.log(`SWAP USDC -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                    await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
-                        await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
-                        });
-                    });
+    //SWAP USDC -> ETH
+    console.log(chalk.yellow(`SWAP USDC -> ETH`));
+    logger.log(`SWAP USDC -> ETH`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+            await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+                    console.log(chalk.yellow(`successful Swap`));
+                });
             });
-
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
-                    logger.log(`Error Swap USDC -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
-                    logger.log(`Swap USDC -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        await timeout(pauseTime);
     }
 }
 
