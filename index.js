@@ -749,35 +749,31 @@ const syncSwapETHToUSDC = async(privateKey) => {
 const syncSwapUSDCToETH = async(privateKey) => {
     const address = privateToAddress(privateKey);
 
-    let isReady;
-    while(!isReady) {
-        //APPROVE USDC
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve USDC for Router`));
-                        logger.log(`Start Approve USDC for Router`);
-                        await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
+    //APPROVE USDC
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve USDC for Router`));
+                    logger.log(`Start Approve USDC for Router`);
+                    await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
                         });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve USDC Successful`));
-                        logger.log(`Approve USDC Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
+                    });
+                } else if (Number(res) >= balance) {
+                    console.log(chalk.magentaBright(`Approve USDC Successful`));
+                    logger.log(`Approve USDC Successful`);
+                    await timeout(pauseTime);
+                }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     //SWAP USDC -> ETH
@@ -795,7 +791,7 @@ const syncSwapUSDCToETH = async(privateKey) => {
     } catch (err) {
         logger.log(err);
         console.log(err.message);
-        await timeout(pauseTime);
+        return;
     }
 }
 
