@@ -152,101 +152,74 @@ const syncSwapStart = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> USDC
-        console.log(chalk.yellow(`Swap ETH -> USDC`));
-        logger.log(`Swap ETH -> USDC`);
-        try {
-            await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> USDC
+    console.log(chalk.yellow(`Swap ETH -> USDC`));
+    logger.log(`Swap ETH -> USDC`);
+    try {
+        await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
+                logger.log(`Swap ETH -> USDC Successful`);
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
+    //APPROVE USDC
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve USDC for Router`));
+                    logger.log(`Start Approve USDC for Router`);
+                    await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
-                    logger.log(`Swap ETH -> USDC Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve USDC Successful`));
+                    logger.log(`Approve USDC Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE USDC
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve USDC for Router`));
-                        logger.log(`Start Approve USDC for Router`);
-                        await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve USDC Successful`));
-                        logger.log(`Approve USDC Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //ADD LIQUIDITY ETH/USDC
-        console.log(chalk.yellow(`Add Liqidity ETH/USDC`));
-        logger.log(`Add Liqidity ETH/USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                await dataAddLiquidity(info.rpc, info.LPPool, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, res.amountETH, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.LPPool, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Add Liqidity, try again`));
-                    logger.log(`Error Add Liqidity, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //ADD LIQUIDITY ETH/USDC
+    console.log(chalk.yellow(`Add Liqidity ETH/USDC`));
+    logger.log(`Add Liqidity ETH/USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+            await dataAddLiquidity(info.rpc, info.LPPool, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, res.amountETH, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Add Liqidity Successful`));
                     logger.log(`Add Liqidity Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const syncSwapEnd = async(privateKey) => {
     console.log(chalk.cyan('Start SyncSwap End'));
@@ -257,71 +230,56 @@ const syncSwapEnd = async(privateKey) => {
         return false;
     }
 
-    let isReady;
-    while(!isReady) {
-        //APPROVE LP
-        console.log(chalk.yellow(`Approve LP`));
-        logger.log(`Approve LP`);
-        try {
-            await getAmountToken(info.rpc, info.LPPool, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.LPPool, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve LP for Router`));
-                        logger.log(`Start Approve LP for Router`);
-                        await dataApprove(info.rpc, info.LPPool, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.LPPool, null, res1.encodeABI, privateKey);
-                            });
+    //APPROVE LP
+    console.log(chalk.yellow(`Approve LP`));
+    logger.log(`Approve LP`);
+    try {
+        await getAmountToken(info.rpc, info.LPPool, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.LPPool, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve LP for Router`));
+                    logger.log(`Start Approve LP for Router`);
+                    await dataApprove(info.rpc, info.LPPool, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.LPPool, null, res1.encodeABI, privateKey);
                         });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve LP Successful`));
-                        logger.log(`Approve LP Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //WITHDRAW LIQUIDITY ETH/USDC
-        console.log(chalk.yellow(`Withdraw Liqidity ETH/USDC`));
-        logger.log(`Withdraw Liqidity ETH/USDC`);
-        try {
-            await getAmountToken(info.rpc, info.LPPool, address).then(async(amountLP) => {
-                await dataDeleteLiquidity(info.rpc, info.LPPool, amountLP, info.SSRouter, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, res.amountETH, res.encodeABI, privateKey);
                     });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.LPPool, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Withdraw Liqidity, try again`));
-                    logger.log(`Error Withdraw Liqidity, try again`);
-                } else if (res == 0) {
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Withdraw Liqidity Successful`));
-                    logger.log(`Withdraw Liqidity Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve LP Successful`));
+                    logger.log(`Approve LP Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //WITHDRAW LIQUIDITY ETH/USDC
+    console.log(chalk.yellow(`Withdraw Liqidity ETH/USDC`));
+    logger.log(`Withdraw Liqidity ETH/USDC`);
+    try {
+        await getAmountToken(info.rpc, info.LPPool, address).then(async(amountLP) => {
+            await dataDeleteLiquidity(info.rpc, info.LPPool, amountLP, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, res.amountETH, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Withdraw Liqidity Successful`));
+                    logger.log(`Withdraw Liqidity Successful`);
+                });
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const syncSwapOTStart = async(privateKey) => {
     console.log(chalk.cyan('Start SyncSwap ETH/OT'));
@@ -329,101 +287,74 @@ const syncSwapOTStart = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> OT
-        console.log(chalk.yellow(`Swap ETH -> OT`));
-        logger.log(`Swap ETH -> OT`);
-        try {
-            await dataSwapETHToToken(info.rpc, info.OT, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> OT
+    console.log(chalk.yellow(`Swap ETH -> OT`));
+    logger.log(`Swap ETH -> OT`);
+    try {
+        await dataSwapETHToToken(info.rpc, info.OT, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> OT Successful`));
+                logger.log(`Swap ETH -> OT Successful`);
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.OT, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
+    //APPROVE OT
+    console.log(chalk.yellow(`Approve OT`));
+    logger.log(`Approve OT`);
+    try {
+        await getAmountToken(info.rpc, info.OT, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.OT, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve OT for Router`));
+                    logger.log(`Start Approve OT for Router`);
+                    await dataApprove(info.rpc, info.OT, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.OT, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> OT Successful`));
-                    logger.log(`Swap ETH -> OT Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve OT Successful`));
+                    logger.log(`Approve OT Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE OT
-        console.log(chalk.yellow(`Approve OT`));
-        logger.log(`Approve OT`);
-        try {
-            await getAmountToken(info.rpc, info.OT, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.OT, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve OT for Router`));
-                        logger.log(`Start Approve OT for Router`);
-                        await dataApprove(info.rpc, info.OT, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.OT, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve OT Successful`));
-                        logger.log(`Approve OT Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //ADD LIQUIDITY ETH/OT
-        console.log(chalk.yellow(`Add Liqidity ETH/OT`));
-        logger.log(`Add Liqidity ETH/OT`);
-        try {
-            await getAmountToken(info.rpc, info.OT, address).then(async(amountOT) => {
-                await dataAddLiquidityToken(info.rpc, info.OTLPPool, info.OT, amountOT, info.SSRouter, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, res.amountETH, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.OTLPPool, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Add Liqidity, try again`));
-                    logger.log(`Error Add Liqidity, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //ADD LIQUIDITY ETH/OT
+    console.log(chalk.yellow(`Add Liqidity ETH/OT`));
+    logger.log(`Add Liqidity ETH/OT`);
+    try {
+        await getAmountToken(info.rpc, info.OT, address).then(async(amountOT) => {
+            await dataAddLiquidityToken(info.rpc, info.OTLPPool, info.OT, amountOT, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, res.amountETH, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Add Liqidity Successful`));
                     logger.log(`Add Liqidity Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const syncSwapOTEnd = async(privateKey) => {
     console.log(chalk.cyan('Start SyncSwap OT End'));
@@ -434,71 +365,56 @@ const syncSwapOTEnd = async(privateKey) => {
         return false;
     }
 
-    let isReady;
-    while(!isReady) {
-        //APPROVE OT LP
-        console.log(chalk.yellow(`Approve OT LP`));
-        logger.log(`Approve OT LP`);
-        try {
-            await getAmountToken(info.rpc, info.OTLPPool, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.OTLPPool, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve OT LP for Router`));
-                        logger.log(`Start Approve OT LP for Router`);
-                        await dataApprove(info.rpc, info.OTLPPool, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.OTLPPool, null, res1.encodeABI, privateKey);
-                            });
+    //APPROVE OT LP
+    console.log(chalk.yellow(`Approve OT LP`));
+    logger.log(`Approve OT LP`);
+    try {
+        await getAmountToken(info.rpc, info.OTLPPool, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.OTLPPool, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve OT LP for Router`));
+                    logger.log(`Start Approve OT LP for Router`);
+                    await dataApprove(info.rpc, info.OTLPPool, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.OTLPPool, null, res1.encodeABI, privateKey);
                         });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve OT LP Successful`));
-                        logger.log(`Approve OT LP Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //WITHDRAW LIQUIDITY ETH/OT
-        console.log(chalk.yellow(`Withdraw Liqidity ETH/OT`));
-        logger.log(`Withdraw Liqidity ETH/OT`);
-        try {
-            await getAmountToken(info.rpc, info.OTLPPool, address).then(async(amountLP) => {
-                await dataDeleteLiquidityToken(info.rpc, info.OTLPPool, amountLP, info.SSRouter, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
                     });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.OTLPPool, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Withdraw ETH/OT Liqidity, try again`));
-                    logger.log(`Error Withdraw ETH/OT Liqidity, try again`);
-                } else if (res == 0) {
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Withdraw ETH/OT Liqidity Successful`));
-                    logger.log(`Withdraw ETH/OT Liqidity Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve OT LP Successful`));
+                    logger.log(`Approve OT LP Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //WITHDRAW LIQUIDITY ETH/OT
+    console.log(chalk.yellow(`Withdraw Liqidity ETH/OT`));
+    logger.log(`Withdraw Liqidity ETH/OT`);
+    try {
+        await getAmountToken(info.rpc, info.OTLPPool, address).then(async(amountLP) => {
+            await dataDeleteLiquidityToken(info.rpc, info.OTLPPool, amountLP, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Withdraw ETH/OT Liqidity Successful`));
+                    logger.log(`Withdraw ETH/OT Liqidity Successful`);
+                });
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const syncSwapWithoutLiq = async(privateKey, swapBack) => {
     console.log(chalk.cyan('Start SyncSwap Without Liquidity'));
@@ -507,64 +423,50 @@ const syncSwapWithoutLiq = async(privateKey, swapBack) => {
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
     let isReady;
-    while(!isReady) {
-        //SWAP ETH -> USDC
-        console.log(chalk.yellow(`Swap ETH -> USDC`));
-        logger.log(`Swap ETH -> USDC`);
-        try {
-            await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> USDC
+    console.log(chalk.yellow(`Swap ETH -> USDC`));
+    logger.log(`Swap ETH -> USDC`);
+    try {
+        await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
+                logger.log(`Swap ETH -> USDC Successful`);
             });
-
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
-                    logger.log(`Swap ETH -> USDC Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE USDC
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve USDC for Router`));
-                        logger.log(`Start Approve USDC for Router`);
-                        await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
+    //APPROVE USDC
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve USDC for Router`));
+                    logger.log(`Start Approve USDC for Router`);
+                    await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
                         });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve USDC Successful`));
-                        logger.log(`Approve USDC Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
+                    });
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve USDC Successful`));
+                    logger.log(`Approve USDC Successful`);
+                }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     if (swapBack) {
@@ -603,7 +505,7 @@ const syncSwapWithoutLiq = async(privateKey, swapBack) => {
     
 
     return true;
-}
+} //+
 
 const syncSwapOTWithoutLiq = async(privateKey) => {
     console.log(chalk.cyan('Start SyncSwap OT Without Liquidity'));
@@ -611,140 +513,101 @@ const syncSwapOTWithoutLiq = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> OT
-        console.log(chalk.yellow(`Swap ETH -> OT`));
-        logger.log(`Swap ETH -> OT`);
-        try {
-            await dataSwapETHToToken(info.rpc, info.OT, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> OT
+    console.log(chalk.yellow(`Swap ETH -> OT`));
+    logger.log(`Swap ETH -> OT`);
+    try {
+        await dataSwapETHToToken(info.rpc, info.OT, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> OT Successful`));
+                logger.log(`Swap ETH -> OT Successful`);
             });
-
-            await getAmountToken(info.rpc, info.OT, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> OT Successful`));
-                    logger.log(`Swap ETH -> OT Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE OT
-        console.log(chalk.yellow(`Approve OT`));
-        logger.log(`Approve OT`);
-        try {
-            await getAmountToken(info.rpc, info.OT, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.OT, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve OT for Router`));
-                        logger.log(`Start Approve OT for Router`);
-                        await dataApprove(info.rpc, info.OT, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.OT, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve OT Successful`));
-                        logger.log(`Approve OT Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //SWAP OT -> ETH
-        console.log(chalk.yellow(`SWAP OT -> ETH`));
-        logger.log(`SWAP OT -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.OT, address).then(async(amountOT) => {
-                    await dataSwapTokenToETH(info.rpc, info.OT, amountOT, info.SSRouter, address, slippage).then(async(res) => {
+    //APPROVE OT
+    console.log(chalk.yellow(`Approve OT`));
+    logger.log(`Approve OT`);
+    try {
+        await getAmountToken(info.rpc, info.OT, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.OT, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve OT for Router`));
+                    logger.log(`Start Approve OT for Router`);
+                    await dataApprove(info.rpc, info.OT, info.SSRouter, address).then(async(res1) => {
                         await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.OT, null, res1.encodeABI, privateKey);
                         });
                     });
-            });
-
-            await getAmountToken(info.rpc, info.OT, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap OT -> ETH, try again`));
-                    logger.log(`Error Swap OT -> ETH, try again`);
-                } else if (res == 0) {
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Swap OT -> ETH Successful`));
-                    logger.log(`Swap OT -> ETH Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve OT Successful`));
+                    logger.log(`Approve OT Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //SWAP OT -> ETH
+    console.log(chalk.yellow(`SWAP OT -> ETH`));
+    logger.log(`SWAP OT -> ETH`);
+    try {
+        await getAmountToken(info.rpc, info.OT, address).then(async(amountOT) => {
+            await dataSwapTokenToETH(info.rpc, info.OT, amountOT, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Swap OT -> ETH Successful`));
+                    logger.log(`Swap OT -> ETH Successful`);
+                });
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
 
     return true;
-}
+} //+
 
 const syncSwapETHToUSDC = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const random = generateRandomAmount(process.env.ETH_SWAP_PERCENT_MIN / 100, process.env.ETH_SWAP_PERCENT_MAX / 100, 3);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> USDC
-        console.log(chalk.yellow(`Swap ETH -> USDC`));
-        logger.log(`Swap ETH -> USDC`);
-        try {
-            await getETHAmount(info.rpc, address).then(async(amountETH) => {
-                amountETH = parseInt(multiply(amountETH, random));
-                await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //SWAP ETH -> USDC
+    console.log(chalk.yellow(`Swap ETH -> USDC`));
+    logger.log(`Swap ETH -> USDC`);
+    try {
+        await getETHAmount(info.rpc, address).then(async(amountETH) => {
+            amountETH = parseInt(multiply(amountETH, random));
+            await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
                     logger.log(`Swap ETH -> USDC Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
-}
+} //+
 
 const syncSwapUSDCToETH = async(privateKey) => {
     const address = privateToAddress(privateKey);
@@ -766,10 +629,10 @@ const syncSwapUSDCToETH = async(privateKey) => {
                 } else if (Number(res) >= balance) {
                     console.log(chalk.magentaBright(`Approve USDC Successful`));
                     logger.log(`Approve USDC Successful`);
-                    await timeout(pauseTime);
                 }
             });
         });
+        await timeout(pauseTime);
     } catch (err) {
         logger.log(err);
         console.log(err.message);
@@ -784,7 +647,7 @@ const syncSwapUSDCToETH = async(privateKey) => {
             await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
                 await getGasPrice(info.rpc).then(async(gasPrice) => {
                     await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
-                    console.log(chalk.yellow(`successful Swap`));
+                    console.log(chalk.yellow(`Successful Swap`));
                 });
             });
         });
@@ -793,7 +656,7 @@ const syncSwapUSDCToETH = async(privateKey) => {
         console.log(err.message);
         return;
     }
-}
+} //+
 
 const spaceFiStart = async(privateKey) => {
     console.log(chalk.cyan('Start SpaceFi'));
@@ -801,164 +664,122 @@ const spaceFiStart = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> USDC
-        console.log(chalk.yellow(`Swap ETH -> USDC`));
-        logger.log(`Swap ETH -> USDC`);
-        try {
-            await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.USDC, amountETH, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> USDC
+    console.log(chalk.yellow(`Swap ETH -> USDC`));
+    logger.log(`Swap ETH -> USDC`);
+    try {
+        await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.USDC, amountETH, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
+                logger.log(`Swap ETH -> USDC Successful`);
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
+    //APPROVE USDC
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve USDC for Space Router`));
+                    logger.log(`Start Approve USDC for Space Router`);
+                    await dataApprove(info.rpc, info.USDC, info.SpaceRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
-                    logger.log(`Swap ETH -> USDC Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve USDC Successful`));
+                    logger.log(`Approve USDC Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE USDC
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.SpaceRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve USDC for Space Router`));
-                        logger.log(`Start Approve USDC for Space Router`);
-                        await dataApprove(info.rpc, info.USDC, info.SpaceRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve USDC Successful`));
-                        logger.log(`Approve USDC Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //ADD LIQUIDITY ETH/USDC
-        console.log(chalk.yellow(`Space Add Liqidity ETH/USDC`));
-        logger.log(`Space Add Liqidity ETH/USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                await dataSpaceAddLiquidityETH(info.rpc, amountUSDC, info.USDC, address, 0.98).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, res.amountETH, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Space Add Liqidity, try again`));
-                    logger.log(`Error Space Add Liqidity, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //ADD LIQUIDITY ETH/USDC
+    console.log(chalk.yellow(`Space Add Liqidity ETH/USDC`));
+    logger.log(`Space Add Liqidity ETH/USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+            await dataSpaceAddLiquidityETH(info.rpc, amountUSDC, info.USDC, address, 0.98).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, res.amountETH, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Space Add Liqidity Successful`));
                     logger.log(`Space Add Liqidity Successful`);
-                    await timeout(pauseTime);
+                });
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //APPROVE LP FOR FARM
+    console.log(chalk.yellow(`Approve LP`));
+    logger.log(`Approve LP`);
+    try {
+        await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.SpaceLPPool, address, info.SpaceFarmer).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve LP for Space Farmer`));
+                    logger.log(`Start Approve LP for Space Farmer`);
+                    await dataApprove(info.rpc, info.SpaceLPPool, info.SpaceFarmer, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SpaceLPPool, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve LP Successful`));
+                    logger.log(`Approve LP Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE LP FOR FARM
-        console.log(chalk.yellow(`Approve LP`));
-        logger.log(`Approve LP`);
-        try {
-            await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.SpaceLPPool, address, info.SpaceFarmer).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve LP for Space Farmer`));
-                        logger.log(`Start Approve LP for Space Farmer`);
-                        await dataApprove(info.rpc, info.SpaceLPPool, info.SpaceFarmer, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SpaceLPPool, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve LP Successful`));
-                        logger.log(`Approve LP Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        } 
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //DEPOSIT LP TO SPACE FARM
-        console.log(chalk.yellow(`DEPOSIT LP TO FARM`));
-        logger.log(`DEPOSIT LP TO FARM`);
-        try {
-            await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(amountLP) => {  
-                await dataSpaceDeposit(info.rpc, amountLP, address).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceFarmer, res.amountETH, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getSpaceFarmAmount(info.rpc, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Space Deposit LP, try again`));
-                    logger.log(`Error Space Deposit LP, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //DEPOSIT LP TO SPACE FARM
+    console.log(chalk.yellow(`DEPOSIT LP TO FARM`));
+    logger.log(`DEPOSIT LP TO FARM`);
+    try {
+        await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(amountLP) => {  
+            await dataSpaceDeposit(info.rpc, amountLP, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceFarmer, res.amountETH, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Space Deposit LP Successful`));
                     logger.log(`Space Deposit LP Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const spaceFiEnd = async(privateKey) => {
     console.log(chalk.cyan('Start SpaceFi End [Withdraw, Delete Liquidity, Swap USDC -> ETH]'));
@@ -969,135 +790,96 @@ const spaceFiEnd = async(privateKey) => {
         return false;
     }
 
-    let isReady;
-    while(!isReady) {
-        //WITHDRAW LP FROM SPACE FARMER
-        console.log(chalk.yellow(`WITHDRAW LP FROM SPACE FARMER`));
-        logger.log(`WITHDRAW LP FROM SPACE FARMER`);
-        try {
-            await getSpaceFarmAmount(info.rpc, address).then(async(res) => {
-                await dataSpaceWithdraw(info.rpc, res, address).then(async(res1) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SpaceFarmer, null, res1.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getSpaceFarmAmount(info.rpc, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Withdraw LP, try again`));
-                    logger.log(`Error Withdraw LP, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //WITHDRAW LP FROM SPACE FARMER
+    console.log(chalk.yellow(`WITHDRAW LP FROM SPACE FARMER`));
+    logger.log(`WITHDRAW LP FROM SPACE FARMER`);
+    try {
+        await getSpaceFarmAmount(info.rpc, address).then(async(res) => {
+            await dataSpaceWithdraw(info.rpc, res, address).then(async(res1) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SpaceFarmer, null, res1.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Withdraw LP Successful`));
                     logger.log(`Withdraw LP Successful`);
-                    await timeout(pauseTime);
+                });
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //APPROVE SPACE LP
+    console.log(chalk.yellow(`Approve Space LP`));
+    logger.log(`Approve Space LP`);
+    try {
+        await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.SpaceLPPool, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve LP for Space Router`));
+                    logger.log(`Start Approve LP for Space Router`);
+                    await dataApprove(info.rpc, info.SpaceLPPool, info.SpaceRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SpaceLPPool, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve Space LP Successful`));
+                    logger.log(`Approve Space LP Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE SPACE LP
-        console.log(chalk.yellow(`Approve Space LP`));
-        logger.log(`Approve Space LP`);
-        try {
-            await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.SpaceLPPool, address, info.SpaceRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve LP for Space Router`));
-                        logger.log(`Start Approve LP for Space Router`);
-                        await dataApprove(info.rpc, info.SpaceLPPool, info.SpaceRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SpaceLPPool, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve Space LP Successful`));
-                        logger.log(`Approve Space LP Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        } 
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //DELETE LIQUIDITY SPACE
-        console.log(chalk.yellow(`DELETE LIQUIDITY SPACE`));
-        logger.log(`DELETE LIQUIDITY SPACE`);
-        try {
-            await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(amountLP) => {   
-                await dataSpaceDeleteLiquidityETH(info.rpc, info.USDC, amountLP, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
-                    });
-                });
-            });
-            
-            await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Delete Liquidity Space LP, try again`));
-                    logger.log(`Error Delete Liquidity Space LP, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //DELETE LIQUIDITY SPACE
+    console.log(chalk.yellow(`DELETE LIQUIDITY SPACE`));
+    logger.log(`DELETE LIQUIDITY SPACE`);
+    try {
+        await getAmountToken(info.rpc, info.SpaceLPPool, address).then(async(amountLP) => {   
+            await dataSpaceDeleteLiquidityETH(info.rpc, info.USDC, amountLP, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Delete Liquidity Space LP Successful`));
                     logger.log(`Delete Liquidity Space LP Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //SWAP SPACE USDC -> ETH
-        console.log(chalk.yellow(`SWAP SPACE USDC -> ETH`));
-        logger.log(`SWAP SPACE USDC -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                await dataSpaceSwapTokenToETH(info.rpc, info.USDC, info.WETH, amountUSDC, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
-                    });
                 });
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap Space USDC -> ETH, try again`));
-                    logger.log(`Error Swap Space USDC -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //SWAP SPACE USDC -> ETH
+    console.log(chalk.yellow(`SWAP SPACE USDC -> ETH`));
+    logger.log(`SWAP SPACE USDC -> ETH`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+            await dataSpaceSwapTokenToETH(info.rpc, info.USDC, info.WETH, amountUSDC, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Swap Space USDC -> ETH Successful`));
                     logger.log(`Swap Space USDC -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const spaceFiStartSPACE = async(privateKey) => {
     console.log(chalk.cyan('Start SpaceFi SPACE'));
@@ -1105,101 +887,74 @@ const spaceFiStartSPACE = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> SPACE
-        console.log(chalk.yellow(`Swap ETH -> SPACE`));
-        logger.log(`Swap ETH -> SPACE`);
-        try {
-            await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.SPACE, amountETH, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> SPACE
+    console.log(chalk.yellow(`Swap ETH -> SPACE`));
+    logger.log(`Swap ETH -> SPACE`);
+    try {
+        await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.SPACE, amountETH, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> SPACE Successful`));
+                logger.log(`Swap ETH -> SPACE Successful`);
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap ETH -> SPACE, try again`));
-                    logger.log(`Error Swap ETH -> SPACE, try again`);
-                } else if (res > 0) {
+    //APPROVE SPACE
+    console.log(chalk.yellow(`Approve SPACE`));
+    logger.log(`Approve SPACE`);
+    try {
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.SPACE, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve SPACE for Space Router`));
+                    logger.log(`Start Approve SPACE for Space Router`);
+                    await dataApprove(info.rpc, info.SPACE, info.SpaceRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SPACE, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> SPACE Successful`));
-                    logger.log(`Swap ETH -> SPACE Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve SPACE Successful`));
+                    logger.log(`Approve SPACE Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE SPACE
-        console.log(chalk.yellow(`Approve SPACE`));
-        logger.log(`Approve SPACE`);
-        try {
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.SPACE, address, info.SpaceRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve SPACE for Space Router`));
-                        logger.log(`Start Approve SPACE for Space Router`);
-                        await dataApprove(info.rpc, info.SPACE, info.SpaceRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SPACE, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve SPACE Successful`));
-                        logger.log(`Approve SPACE Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //ADD LIQUIDITY ETH/SPACE
-        console.log(chalk.yellow(`Space Add Liqidity ETH/SPACE`));
-        logger.log(`Space Add Liqidity ETH/SPACE`);
-        try {
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
-                await dataSpaceAddLiquidityETH(info.rpc, amountSPACE, info.SPACE, address, 0.98).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, res.amountETH, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Add Liqidity ETH/SPACE, try again`));
-                    logger.log(`Error Add Liqidity ETH/SPACE, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //ADD LIQUIDITY ETH/SPACE
+    console.log(chalk.yellow(`Space Add Liqidity ETH/SPACE`));
+    logger.log(`Space Add Liqidity ETH/SPACE`);
+    try {
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
+            await dataSpaceAddLiquidityETH(info.rpc, amountSPACE, info.SPACE, address, 0.98).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, res.amountETH, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`ETH/SPACE Add Liqidity Successful`));
                     logger.log(`ETH/SPACE Add Liqidity Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const spaceFiEndSPACE = async(privateKey) => {
     console.log(chalk.cyan('Start SpaceFi End SPACE [Delete Liquidity, Swap SPACE -> ETH]'));
@@ -1210,103 +965,76 @@ const spaceFiEndSPACE = async(privateKey) => {
         return false;
     }
 
-    let isReady;
-    while(!isReady) {
-        //APPROVE SPACE LP
-        console.log(chalk.yellow(`Approve Space LP`));
-        logger.log(`Approve Space LP`);
-        try {
-            await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.LPPoolSPACE, address, info.SpaceRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve ETH/SPACE LP for Space Router`));
-                        logger.log(`Start Approve ETH/SPACE LP for Space Router`);
-                        await dataApprove(info.rpc, info.LPPoolSPACE, info.SpaceRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.LPPoolSPACE, null, res1.encodeABI, privateKey);
-                            });
+    //APPROVE SPACE LP
+    console.log(chalk.yellow(`Approve Space LP`));
+    logger.log(`Approve Space LP`);
+    try {
+        await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.LPPoolSPACE, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve ETH/SPACE LP for Space Router`));
+                    logger.log(`Start Approve ETH/SPACE LP for Space Router`);
+                    await dataApprove(info.rpc, info.LPPoolSPACE, info.SpaceRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.LPPoolSPACE, null, res1.encodeABI, privateKey);
                         });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve ETH/SPACE LP Successful`));
-                        logger.log(`Approve ETH/SPACE LP Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
+                    });
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve ETH/SPACE LP Successful`));
+                    logger.log(`Approve ETH/SPACE LP Successful`);
+                }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }  
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //DELETE LIQUIDITY ETH/SPACE
-        console.log(chalk.yellow(`DELETE LIQUIDITY ETH/SPACE`));
-        logger.log(`DELETE LIQUIDITY ETH/SPACE`);
-        try {
-            await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(amountLP) => {   
-                await dataSpaceDeleteLiquidityETH(info.rpc, info.SPACE, amountLP, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Delete Liquidity ETH/SPACE LP, try again`));
-                    logger.log(`Error Delete Liquidity ETH/SPACE LP, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //DELETE LIQUIDITY ETH/SPACE
+    console.log(chalk.yellow(`DELETE LIQUIDITY ETH/SPACE`));
+    logger.log(`DELETE LIQUIDITY ETH/SPACE`);
+    try {
+        await getAmountToken(info.rpc, info.LPPoolSPACE, address).then(async(amountLP) => {   
+            await dataSpaceDeleteLiquidityETH(info.rpc, info.SPACE, amountLP, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Delete Liquidity ETH/SPACE LP Successful`));
                     logger.log(`Delete Liquidity ETH/SPACE LP Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //SWAP SPACE SPACE -> ETH
-        console.log(chalk.yellow(`SWAP SPACE SPACE -> ETH`));
-        logger.log(`SWAP SPACE SPACE -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
-                await dataSpaceSwapTokenToETH(info.rpc, info.SPACE, info.WETH, amountSPACE, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
-                    });
                 });
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap Space SPACE -> ETH, try again`));
-                    logger.log(`Error Swap Space SPACE -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //SWAP SPACE SPACE -> ETH
+    console.log(chalk.yellow(`SWAP SPACE SPACE -> ETH`));
+    logger.log(`SWAP SPACE SPACE -> ETH`);
+    try {
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
+            await dataSpaceSwapTokenToETH(info.rpc, info.SPACE, info.WETH, amountSPACE, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Swap Space SPACE -> ETH Successful`));
                     logger.log(`Swap Space SPACE -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
+} //+
 
 const spaceFiWithoutLiq = async(privateKey, swapBack) => {
     console.log(chalk.cyan('Start SpaceFi Without Liquidity'));
@@ -1315,64 +1043,50 @@ const spaceFiWithoutLiq = async(privateKey, swapBack) => {
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
     let isReady;
-    while(!isReady) {
-        //SWAP ETH -> USDC
-        console.log(chalk.yellow(`Swap ETH -> USDC`));
-        logger.log(`Swap ETH -> USDC`);
-        try {
-            await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.USDC, amountETH, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> USDC
+    console.log(chalk.yellow(`Swap ETH -> USDC`));
+    logger.log(`Swap ETH -> USDC`);
+    try {
+        await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.USDC, amountETH, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
+                logger.log(`Swap ETH -> USDC Successful`);
             });
-
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> USDC Successful`));
-                    logger.log(`Swap ETH -> USDC Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE USDC
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.SpaceRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve USDC for Space Router`));
-                        logger.log(`Start Approve USDC for Space Router`);
-                        await dataApprove(info.rpc, info.USDC, info.SpaceRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
+    //APPROVE USDC
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve USDC for Space Router`));
+                    logger.log(`Start Approve USDC for Space Router`);
+                    await dataApprove(info.rpc, info.USDC, info.SpaceRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
                         });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve USDC Successful`));
-                        logger.log(`Approve USDC Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
+                    });
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve USDC Successful`));
+                    logger.log(`Approve USDC Successful`);
+                }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     if (swapBack) {
@@ -1410,7 +1124,7 @@ const spaceFiWithoutLiq = async(privateKey, swapBack) => {
     }
 
     return true;
-}
+} //+
 
 const spaceFiSPACEWithoutLiq = async(privateKey) => {
     console.log(chalk.cyan('Start SpaceFi SPACE Without Liquidity'));
@@ -1418,102 +1132,75 @@ const spaceFiSPACEWithoutLiq = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> SPACE
-        console.log(chalk.yellow(`Swap ETH -> SPACE`));
-        logger.log(`Swap ETH -> SPACE`);
-        try {
-            await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.SPACE, amountETH, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> SPACE
+    console.log(chalk.yellow(`Swap ETH -> SPACE`));
+    logger.log(`Swap ETH -> SPACE`);
+    try {
+        await dataSpaceSwapETHToToken(info.rpc, info.WETH, info.SPACE, amountETH, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap ETH -> SPACE Successful`));
+                logger.log(`Swap ETH -> SPACE Successful`);
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap ETH -> SPACE, try again`));
-                    logger.log(`Error Swap ETH -> SPACE, try again`);
-                } else if (res > 0) {
+    //APPROVE SPACE
+    console.log(chalk.yellow(`Approve SPACE`));
+    logger.log(`Approve SPACE`);
+    try {
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.SPACE, address, info.SpaceRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve SPACE for Space Router`));
+                    logger.log(`Start Approve SPACE for Space Router`);
+                    await dataApprove(info.rpc, info.SPACE, info.SpaceRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SPACE, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
                     isReady = true;
-                    console.log(chalk.magentaBright(`Swap ETH -> SPACE Successful`));
-                    logger.log(`Swap ETH -> SPACE Successful`);
-                    await timeout(pauseTime);
+                    console.log(chalk.magentaBright(`Approve SPACE Successful`));
+                    logger.log(`Approve SPACE Successful`);
                 }
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //APPROVE SPACE
-        console.log(chalk.yellow(`Approve SPACE`));
-        logger.log(`Approve SPACE`);
-        try {
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.SPACE, address, info.SpaceRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve SPACE for Space Router`));
-                        logger.log(`Start Approve SPACE for Space Router`);
-                        await dataApprove(info.rpc, info.SPACE, info.SpaceRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.SPACE, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve SPACE Successful`));
-                        logger.log(`Approve SPACE Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //SWAP SPACE SPACE -> ETH
-        console.log(chalk.yellow(`SWAP SPACE SPACE -> ETH`));
-        logger.log(`SWAP SPACE SPACE -> ETH`);
-        try {
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
-                await dataSpaceSwapTokenToETH(info.rpc, info.SPACE, info.WETH, amountSPACE, address, slippage).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
-                    });
-                });
-            });
-
-            await getAmountToken(info.rpc, info.SPACE, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Swap Space SPACE -> ETH, try again`));
-                    logger.log(`Error Swap Space SPACE -> ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //SWAP SPACE SPACE -> ETH
+    console.log(chalk.yellow(`SWAP SPACE SPACE -> ETH`));
+    logger.log(`SWAP SPACE SPACE -> ETH`);
+    try {
+        await getAmountToken(info.rpc, info.SPACE, address).then(async(amountSPACE) => {
+            await dataSpaceSwapTokenToETH(info.rpc, info.SPACE, info.WETH, amountSPACE, address, slippage).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Swap Space SPACE -> ETH Successful`));
                     logger.log(`Swap Space SPACE -> ETH Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
 
     return true;
-}
+} //+
 
 const nexonFinanceStart = async(privateKey, swapBack) => {
     console.log(chalk.cyan('Start Nexon Finance [Swap/Deposit/Borrow/Repay/Withdraw]'));
@@ -1521,257 +1208,185 @@ const nexonFinanceStart = async(privateKey, swapBack) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //SWAP ETH -> USDC
-        console.log(chalk.yellow(`Swap ETH -> USDC`));
-        logger.log(`Swap ETH -> USDC`);
-        try {
-            await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
-                });
+    //SWAP ETH -> USDC
+    console.log(chalk.yellow(`Swap ETH -> USDC`));
+    logger.log(`Swap ETH -> USDC`);
+    try {
+        await dataSwapETHToToken(info.rpc, info.USDC, amountETH, info.SSRouter, address, slippage).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Swap Successful`));
+                logger.log(`Swap Successful`);
             });
-
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Swap, try again`));
-                    logger.log(`Error Swap, try again`);
-                } else if (res > 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Swap Successful`));
-                    logger.log(`Swap Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }  
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
-    isReady = false;
-    while(!isReady) {
-        //Enter Markets USDC
-        console.log(chalk.yellow(`Enter Markets USDC`));
-        logger.log(`Enter Markets USDC`);
-        
-        try {
-            await checkMembership(info.rpc, info.Unitoller, address, info.nUSDC).then(async(res) => {
-                if (!res) { 
-                    await dataEnterMarkets(info.rpc, info.Unitoller, info.nUSDC, address).then(async(res1) => {
-                        await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.Unitoller, null, res1.encodeABI, privateKey);
-                        });
-                    });
-                } else if (res) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Enter Markets Successful`));
-                    logger.log(`Enter Markets Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }  
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //APPROVE USDC
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.nUSDC).then(async(res) => {
-                    if (Number(res) < balance) {
-                        await dataApprove(info.rpc, info.USDC, info.nUSDC, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve Successful`));
-                        logger.log(`Approve Successful`);
-                        await timeout(pauseTime);
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }  
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //SUPPLY USDC
-        console.log(chalk.yellow(`SUPPLY USDC`));
-        logger.log(`SUPPLY USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                amountUSDC = parseInt(amountUSDC / 10**5) * 10**5;
-                await dataSupplyNexon(info.rpc, info.nUSDC, amountUSDC, address).then(async(res) => {
+    //Enter Markets USDC
+    console.log(chalk.yellow(`Enter Markets USDC`));
+    logger.log(`Enter Markets USDC`);
+    try {
+        await checkMembership(info.rpc, info.Unitoller, address, info.nUSDC).then(async(res) => {
+            if (!res) { 
+                await dataEnterMarkets(info.rpc, info.Unitoller, info.nUSDC, address).then(async(res1) => {
                     await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
+                        await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.Unitoller, null, res1.encodeABI, privateKey);
                     });
                 });
-            });
+            }
+        });
+        console.log(chalk.magentaBright(`Enter Markets Successful`));
+        logger.log(`Enter Markets Successful`);
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountToken(info.rpc, info.nUSDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Supply USDC, try again`));
-                    logger.log(`Error Supply USDC, try again`);
-                } else if (res > 0) {
+    //APPROVE USDC
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.nUSDC).then(async(res) => {
+                if (Number(res) < balance) {
+                    await dataApprove(info.rpc, info.USDC, info.nUSDC, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
                     isReady = true;
+                    console.log(chalk.magentaBright(`Approve Successful`));
+                    logger.log(`Approve Successful`);
+                }
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //SUPPLY USDC
+    console.log(chalk.yellow(`SUPPLY USDC`));
+    logger.log(`SUPPLY USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+            amountUSDC = parseInt(amountUSDC / 10**5) * 10**5;
+            await dataSupplyNexon(info.rpc, info.nUSDC, amountUSDC, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Supply Successful`));
                     logger.log(`Supply Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //BORROW USDC
-        console.log(chalk.yellow(`BORROW USDC`));
-        logger.log(`BORROW USDC`);
-        try {
-            await getAmountDeposit(info.rpc, info.nUSDC, address).then(async(amountUSDC) => {
-                const supplyBorrow = parseFloat((1 - generateRandomAmount(1 - process.env.SLIPPAGE_BORROW_MIN / 100, 1 - process.env.SLIPPAGE_BORROW_MAX / 100, 2))).toFixed(2);
-                amountUSDC = parseInt(amountUSDC * supplyBorrow / 10**5) * 10**5;
-                await dataBorrowNexon(info.rpc, info.nUSDC, amountUSDC, address).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
-                    });
                 });
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountBorrow(info.rpc, info.nUSDC, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Borrow USDC, try again`));
-                    logger.log(`Error Borrow USDC, try again`);
-                } else if (res > 0) {
-                    isReady = true;
+    //BORROW USDC
+    console.log(chalk.yellow(`BORROW USDC`));
+    logger.log(`BORROW USDC`);
+    try {
+        await getAmountDeposit(info.rpc, info.nUSDC, address).then(async(amountUSDC) => {
+            const supplyBorrow = parseFloat((1 - generateRandomAmount(1 - process.env.SLIPPAGE_BORROW_MIN / 100, 1 - process.env.SLIPPAGE_BORROW_MAX / 100, 2))).toFixed(2);
+            amountUSDC = parseInt(amountUSDC * supplyBorrow / 10**5) * 10**5;
+            await dataBorrowNexon(info.rpc, info.nUSDC, amountUSDC, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Borrow Successful`));
                     logger.log(`Borrow Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //REPAY USDC
-        console.log(chalk.yellow(`REPAY USDC`));
-        logger.log(`REPAY USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(res1) => {
-                await dataRepayNexon(info.rpc, info.nUSDC, res1, address).then(async(res2) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res2.estimateGas, gasPrice, info.nUSDC, null, res2.encodeABI, privateKey);
-                    });
                 });
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountBorrow(info.rpc, info.nUSDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Repay USDC, try again`));
-                    logger.log(`Error Repay USDC, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //REPAY USDC
+    console.log(chalk.yellow(`REPAY USDC`));
+    logger.log(`REPAY USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(res1) => {
+            await dataRepayNexon(info.rpc, info.nUSDC, res1, address).then(async(res2) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res2.estimateGas, gasPrice, info.nUSDC, null, res2.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Repay Successful`));
                     logger.log(`Repay Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //WITHDRAW USDC
-        console.log(chalk.yellow(`WITHDRAW USDC`));
-        logger.log(`WITHDRAW USDC`);
-        try {
-            await getAmountRedeem(info.rpc, info.nUSDC, address).then(async(amountRedeem) => {
-                await dataRedeemNexon(info.rpc, info.nUSDC, amountRedeem, address).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
-                    });
                 });
             });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountRedeem(info.rpc, info.nUSDC, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Withdraw USDC, try again`));
-                    logger.log(`Error Withdraw USDC, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //WITHDRAW USDC
+    console.log(chalk.yellow(`WITHDRAW USDC`));
+    logger.log(`WITHDRAW USDC`);
+    try {
+        await getAmountRedeem(info.rpc, info.nUSDC, address).then(async(amountRedeem) => {
+            await dataRedeemNexon(info.rpc, info.nUSDC, amountRedeem, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nUSDC, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Withdraw Successful`));
                     logger.log(`Withdraw Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //APPROVE USDC SYNCSWAP
-        console.log(chalk.yellow(`Approve USDC`));
-        logger.log(`Approve USDC`);
-        try {
-            await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
-                await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
-                    if (Number(res) < balance) {
-                        console.log(chalk.yellow(`Start Approve USDC for SyncSwap`));
-                        logger.log(`Start Approve USDC for SyncSwap`);
-                        await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
-                            });
-                        });
-                    } else if (Number(res) >= balance) {
-                        isReady = true;
-                        console.log(chalk.magentaBright(`Approve USDC SyncSwap Successful`));
-                        logger.log(`Approve USDC SyncSwap Successful`);
-                        await timeout(pauseTime);
-                    }
                 });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }  
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //APPROVE USDC SYNCSWAP
+    console.log(chalk.yellow(`Approve USDC`));
+    logger.log(`Approve USDC`);
+    try {
+        await getAmountToken(info.rpc, info.USDC, address).then(async(balance) => {
+            await checkAllowance(info.rpc, info.USDC, address, info.SSRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve USDC for SyncSwap`));
+                    logger.log(`Start Approve USDC for SyncSwap`);
+                    await dataApprove(info.rpc, info.USDC, info.SSRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.USDC, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
+                    isReady = true;
+                    console.log(chalk.magentaBright(`Approve USDC SyncSwap Successful`));
+                    logger.log(`Approve USDC SyncSwap Successful`);
+                }
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     if (swapBack) {
-        isReady = false;
+        let isReady;
         while(!isReady) {
             //SWAP USDC -> ETH
             console.log(chalk.yellow(`SWAP USDC -> ETH`));
@@ -1797,7 +1412,7 @@ const nexonFinanceStart = async(privateKey, swapBack) => {
                     }
                 });
             } catch (err) {
-                logger.log(err.message);
+                logger.log(err);
                 console.log(err.message);
                 await timeout(pauseTime);
             }
@@ -1805,7 +1420,7 @@ const nexonFinanceStart = async(privateKey, swapBack) => {
     }
 
     return true;
-}
+} //+
 
 const nexonFinanceETHStart = async(privateKey) => {
     console.log(chalk.cyan('Start Nexon Finance ETH [Deposit/Borrow]'));
@@ -1813,108 +1428,71 @@ const nexonFinanceETHStart = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
-    while(!isReady) {
-        //Enter Markets USDC
-        console.log(chalk.yellow(`Enter Markets ETH`));
-        logger.log(`Enter Markets ETH`);
-        
-        try {
-            await checkMembership(info.rpc, info.Unitoller, address, info.nETH).then(async(res) => {
-                if (!res) { 
-                    await dataEnterMarkets(info.rpc, info.Unitoller, info.nETH, address).then(async(res1) => {
-                        await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.Unitoller, null, res1.encodeABI, privateKey);
-                        });
-                    });
-                } else if (res) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Enter Markets ETH Successful`));
-                    logger.log(`Enter Markets ETH Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }   
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //SUPPLY ETH
-        console.log(chalk.yellow(`SUPPLY ETH`));
-        logger.log(`SUPPLY ETH`);
-        try {
-            await dataSupplyNexon(info.rpc, info.nETH, amountETH, address).then(async(res) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nETH, amountETH, res.encodeABI, privateKey);
-                });
-            });
-
-            await getAmountToken(info.rpc, info.nETH, address).then(async(res) => {
-                if (res == 0) {
-                    console.log(chalk.red(`Error Supply ETH, try again`));
-                    logger.log(`Error Supply ETH, try again`);
-                } else if (res > 0) {
-                    isReady = true;
-                    console.log(chalk.magentaBright(`Supply ETH Successful`));
-                    logger.log(`Supply ETH Successful`);
-                    await timeout(pauseTime);
-                }
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        } 
-    }
-
-    isReady = false;
-    while(!isReady) {
-        //WITHDRAW ETH
-        console.log(chalk.yellow(`WITHDRAW ETH`));
-        logger.log(`WITHDRAW ETH`);
-        try {
-            await getAmountRedeem(info.rpc, info.nETH, address).then(async(amountRedeem) => {
-                await dataRedeemNexon(info.rpc, info.nETH, amountRedeem, address).then(async(res) => {
+    //Enter Markets USDC
+    console.log(chalk.yellow(`Enter Markets ETH`));
+    logger.log(`Enter Markets ETH`);
+    
+    try {
+        await checkMembership(info.rpc, info.Unitoller, address, info.nETH).then(async(res) => {
+            if (!res) { 
+                await dataEnterMarkets(info.rpc, info.Unitoller, info.nETH, address).then(async(res1) => {
                     await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nETH, null, res.encodeABI, privateKey);
+                        await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.Unitoller, null, res1.encodeABI, privateKey);
                     });
                 });
-            });
+            } else if (res) {
+                isReady = true;
+                console.log(chalk.magentaBright(`Enter Markets ETH Successful`));
+                logger.log(`Enter Markets ETH Successful`);
+            }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
 
-            await getAmountRedeem(info.rpc, info.nETH, address).then(async(res) => {
-                if (res > 0) {
-                    console.log(chalk.red(`Error Withdraw ETH, try again`));
-                    logger.log(`Error Withdraw ETH, try again`);
-                } else if (res == 0) {
-                    isReady = true;
+    //SUPPLY ETH
+    console.log(chalk.yellow(`SUPPLY ETH`));
+    logger.log(`SUPPLY ETH`);
+    try {
+        await dataSupplyNexon(info.rpc, info.nETH, amountETH, address).then(async(res) => {
+            await getGasPrice(info.rpc).then(async(gasPrice) => {
+                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nETH, amountETH, res.encodeABI, privateKey);
+                console.log(chalk.magentaBright(`Supply ETH Successful`));
+                logger.log(`Supply ETH Successful`);
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //WITHDRAW ETH
+    console.log(chalk.yellow(`WITHDRAW ETH`));
+    logger.log(`WITHDRAW ETH`);
+    try {
+        await getAmountRedeem(info.rpc, info.nETH, address).then(async(amountRedeem) => {
+            await dataRedeemNexon(info.rpc, info.nETH, amountRedeem, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.nETH, null, res.encodeABI, privateKey);
                     console.log(chalk.magentaBright(`Withdraw ETH Successful`));
                     logger.log(`Withdraw ETH Successful`);
-                    await timeout(pauseTime);
-                }
+                });
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
 
     return true;
-}
-
-const nexonFinanceEnd = async(privateKey) => {
-    /*console.log(chalk.cyan('Start Nexon Finance [Repay/Withdraw/Swap]'));
-    logger.log('Start Nexon Finance [Repay/Withdraw/Swap]');
-    const address = privateToAddress(privateKey);
-    const checkBalance = await getAmountBorrow(info.rpc, info.nUSDC, address);
-    if (checkBalance == 0) {
-        return false;
-    }*/
-}
+} //+
 
 const bridgeETHToEthereum = async(privateKey) => {
     const addressETH = privateToAddress(privateKey);
@@ -1945,29 +1523,26 @@ const bridgeETHToEthereum = async(privateKey) => {
 const registerName = async(privateKey) => {
     const address = privateToAddress(privateKey);
 
-    let isReady;
-    while(!isReady) {
-        //REGISTER NAME .ERA
-        
-        try {
-            await generateRandomName().then(async(name) => {
-                console.log(chalk.magentaBright(`Name: ${name}.era`));
-                logger.log(`Name: ${name}.era`);
-                await dataRegisterName(info.rpc, name, address).then(async(res) => {
-                    await getGasPrice(info.rpc).then(async(gasPrice) => {
-                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.NameService, 3 * 10**15, res.encodeABI, privateKey);
-                        isReady = true;
-                    });
+    //REGISTER NAME .ERA
+    try {
+        await generateRandomName().then(async(name) => {
+            console.log(chalk.magentaBright(`Name: ${name}.era`));
+            logger.log(`Name: ${name}.era`);
+            await dataRegisterName(info.rpc, name, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.NameService, 3 * 10**15, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Register Successful`));
+                    logger.log(`Register Successful`);
                 });
-                await timeout(pauseTime);
             });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
             await timeout(pauseTime);
-        }   
+        });
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
     }
-}
+} //+
 
 const withdrawETHToSubWallet = async(toAddress, privateKey) => {
     const addressEthereum = privateToAddress(privateKey);
@@ -2049,17 +1624,19 @@ const wrapETHSync = async(privateKey) => {
             await dataWrapETH(info.rpc, amountETH, address).then(async(res) => {
                 await getGasPrice(info.rpc).then(async(gasPrice) => {
                     await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.WETH, amountETH, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Wrap Successful`));
+                    logger.log(`Wrap Successful`);
                 });
             });
         });
     } catch (err) {
-        logger.log(error);
+        logger.log(err);
         console.log(err.message);
         return;
     }
 
     return true;
-}
+} //+
 
 const unwrapETHSync = async(privateKey) => {
     const address = privateToAddress(privateKey);
@@ -2069,17 +1646,19 @@ const unwrapETHSync = async(privateKey) => {
             await dataUnwrapETH(info.rpc, amountWETH, address).then(async(res) => {
                 await getGasPrice(info.rpc).then(async(gasPrice) => {
                     await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.WETH, null, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Unwrap Successful`));
+                    logger.log(`Unwrap Successful`);
                 });
             });
         });
     } catch (err) {
-        logger.log(error);
+        logger.log(err);
         console.log(err.message);
         return;
     }
 
     return true;
-}
+} //+
 
 const getBalanceWallet = async(privateKey) => {
     const address = privateToAddress(privateKey);
