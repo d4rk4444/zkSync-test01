@@ -185,7 +185,6 @@ const syncSwapStart = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve USDC Successful`));
                     logger.log(`Approve USDC Successful`);
                 }
@@ -245,7 +244,6 @@ const syncSwapEnd = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve LP Successful`));
                     logger.log(`Approve LP Successful`);
                 }
@@ -320,7 +318,6 @@ const syncSwapOTStart = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve OT Successful`));
                     logger.log(`Approve OT Successful`);
                 }
@@ -380,7 +377,6 @@ const syncSwapOTEnd = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve OT LP Successful`));
                     logger.log(`Approve OT LP Successful`);
                 }
@@ -422,7 +418,6 @@ const syncSwapWithoutLiq = async(privateKey, swapBack) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
     //SWAP ETH -> USDC
     console.log(chalk.yellow(`Swap ETH -> USDC`));
     logger.log(`Swap ETH -> USDC`);
@@ -456,7 +451,6 @@ const syncSwapWithoutLiq = async(privateKey, swapBack) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve USDC Successful`));
                     logger.log(`Approve USDC Successful`);
                 }
@@ -470,36 +464,24 @@ const syncSwapWithoutLiq = async(privateKey, swapBack) => {
     }
 
     if (swapBack) {
-        isReady = false;
-        while(!isReady) {
-            //SWAP USDC -> ETH
-            console.log(chalk.yellow(`SWAP USDC -> ETH`));
-            logger.log(`SWAP USDC -> ETH`);
-            try {
-                await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                        await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
-                            });
-                        });
-                });
-
-                await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                    if (res > 0) {
-                        console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
-                        logger.log(`Error Swap USDC -> ETH, try again`);
-                    } else if (res == 0) {
-                        isReady = true;
+        //SWAP USDC -> ETH
+        console.log(chalk.yellow(`SWAP USDC -> ETH`));
+        logger.log(`SWAP USDC -> ETH`);
+        try {
+            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
                         console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
                         logger.log(`Swap USDC -> ETH Successful`);
-                        await timeout(pauseTime);
-                    }
+                    });
                 });
-            } catch (err) {
-                logger.log(err.message);
-                console.log(err.message);
-                await timeout(pauseTime);
-            }
+            });
+            await timeout(pauseTime);
+        } catch (err) {
+            logger.log(err);
+            console.log(err.message);
+            return;
         }
     }
     
@@ -546,7 +528,6 @@ const syncSwapOTWithoutLiq = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve OT Successful`));
                     logger.log(`Approve OT Successful`);
                 }
@@ -697,7 +678,6 @@ const spaceFiStart = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve USDC Successful`));
                     logger.log(`Approve USDC Successful`);
                 }
@@ -745,7 +725,6 @@ const spaceFiStart = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve LP Successful`));
                     logger.log(`Approve LP Successful`);
                 }
@@ -825,7 +804,6 @@ const spaceFiEnd = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve Space LP Successful`));
                     logger.log(`Approve Space LP Successful`);
                 }
@@ -920,7 +898,6 @@ const spaceFiStartSPACE = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve SPACE Successful`));
                     logger.log(`Approve SPACE Successful`);
                 }
@@ -980,7 +957,6 @@ const spaceFiEndSPACE = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve ETH/SPACE LP Successful`));
                     logger.log(`Approve ETH/SPACE LP Successful`);
                 }
@@ -1042,7 +1018,6 @@ const spaceFiWithoutLiq = async(privateKey, swapBack) => {
     const address = privateToAddress(privateKey);
     const amountETH = generateRandomAmount(process.env.ETH_SWAP_MIN * 10**18, process.env.ETH_SWAP_MAX * 10**18, 0);
 
-    let isReady;
     //SWAP ETH -> USDC
     console.log(chalk.yellow(`Swap ETH -> USDC`));
     logger.log(`Swap ETH -> USDC`);
@@ -1076,7 +1051,6 @@ const spaceFiWithoutLiq = async(privateKey, swapBack) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve USDC Successful`));
                     logger.log(`Approve USDC Successful`);
                 }
@@ -1090,36 +1064,24 @@ const spaceFiWithoutLiq = async(privateKey, swapBack) => {
     }
 
     if (swapBack) {
-        isReady = false;
-        while(!isReady) {
-            //SWAP SPACE USDC -> ETH
-            console.log(chalk.yellow(`SWAP SPACE USDC -> ETH`));
-            logger.log(`SWAP SPACE USDC -> ETH`);
-            try {
-                await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                    await dataSpaceSwapTokenToETH(info.rpc, info.USDC, info.WETH, amountUSDC, address, slippage).then(async(res) => {
-                        await getGasPrice(info.rpc).then(async(gasPrice) => {
-                            await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
-                        });
-                    });
-                });
-
-                await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                    if (res > 0) {
-                        console.log(chalk.red(`Error Swap Space USDC -> ETH, try again`));
-                        logger.log(`Error Swap Space USDC -> ETH, try again`);
-                    } else if (res == 0) {
-                        isReady = true;
+        //SWAP SPACE USDC -> ETH
+        console.log(chalk.yellow(`SWAP SPACE USDC -> ETH`));
+        logger.log(`SWAP SPACE USDC -> ETH`);
+        try {
+            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                await dataSpaceSwapTokenToETH(info.rpc, info.USDC, info.WETH, amountUSDC, address, slippage).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SpaceRouter, null, res.encodeABI, privateKey);
                         console.log(chalk.magentaBright(`Swap Space USDC -> ETH Successful`));
                         logger.log(`Swap Space USDC -> ETH Successful`);
-                        await timeout(pauseTime);
-                    }
+                    });
                 });
-            } catch (err) {
-                logger.log(err.message);
-                console.log(err.message);
-                await timeout(pauseTime);
-            }
+            });
+            await timeout(pauseTime);
+        } catch (err) {
+            logger.log(err);
+            console.log(err.message);
+            return;
         }
     }
 
@@ -1165,7 +1127,6 @@ const spaceFiSPACEWithoutLiq = async(privateKey) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve SPACE Successful`));
                     logger.log(`Approve SPACE Successful`);
                 }
@@ -1261,7 +1222,6 @@ const nexonFinanceStart = async(privateKey, swapBack) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve Successful`));
                     logger.log(`Approve Successful`);
                 }
@@ -1372,7 +1332,6 @@ const nexonFinanceStart = async(privateKey, swapBack) => {
                         });
                     });
                 } else if (Number(res) >= balance) {
-                    isReady = true;
                     console.log(chalk.magentaBright(`Approve USDC SyncSwap Successful`));
                     logger.log(`Approve USDC SyncSwap Successful`);
                 }
@@ -1386,36 +1345,24 @@ const nexonFinanceStart = async(privateKey, swapBack) => {
     }
 
     if (swapBack) {
-        let isReady;
-        while(!isReady) {
-            //SWAP USDC -> ETH
-            console.log(chalk.yellow(`SWAP USDC -> ETH`));
-            logger.log(`SWAP USDC -> ETH`);
-            try {
-                await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
-                        await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
-                            await getGasPrice(info.rpc).then(async(gasPrice) => {
-                                await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
-                            });
-                        });
-                });
-
-                await getAmountToken(info.rpc, info.USDC, address).then(async(res) => {
-                    if (res > 0) {
-                        console.log(chalk.red(`Error Swap USDC -> ETH, try again`));
-                        logger.log(`Error Swap USDC -> ETH, try again`);
-                    } else if (res == 0) {
-                        isReady = true;
+        //SWAP USDC -> ETH
+        console.log(chalk.yellow(`SWAP USDC -> ETH`));
+        logger.log(`SWAP USDC -> ETH`);
+        try {
+            await getAmountToken(info.rpc, info.USDC, address).then(async(amountUSDC) => {
+                await dataSwapTokenToETH(info.rpc, info.USDC, amountUSDC, info.SSRouter, address, slippage).then(async(res) => {
+                    await getGasPrice(info.rpc).then(async(gasPrice) => {
+                        await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.SSRouter, null, res.encodeABI, privateKey);
                         console.log(chalk.magentaBright(`Swap USDC -> ETH Successful`));
                         logger.log(`Swap USDC -> ETH Successful`);
-                        await timeout(pauseTime);
-                    }
+                    });
                 });
-            } catch (err) {
-                logger.log(err);
-                console.log(err.message);
-                await timeout(pauseTime);
-            }
+            });
+            await timeout(pauseTime);
+        } catch (err) {
+            logger.log(err);
+            console.log(err.message);
+            return;
         }
     }
 
@@ -1441,7 +1388,6 @@ const nexonFinanceETHStart = async(privateKey) => {
                     });
                 });
             } else if (res) {
-                isReady = true;
                 console.log(chalk.magentaBright(`Enter Markets ETH Successful`));
                 logger.log(`Enter Markets ETH Successful`);
             }
