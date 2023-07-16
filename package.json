@@ -1,6 +1,6 @@
 {
   "name": "zksync-test",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Скрипт для автоматизации действий в сети ZkSync Era. Взаимодействует с такими проектами, как ZkSync Portal, SyncSwap, Nexon Finance, SpaceFi.     A script for automating ZkSync Era network activities. Interacts with projects such as ZkSync Portal, SyncSwap, Nexon Finance, SpaceFi.",
   "main": "index.js",
   "type": "module",
@@ -14,7 +14,6 @@
     "chalk": "^5.2.0",
     "console-stamp": "^3.1.1",
     "dotenv": "^16.0.3",
-    "fs": "^0.0.1-security",
     "mathjs": "^11.7.0",
     "readline-sync": "^1.4.10",
     "web3": "^1.9.0"

@@ -1618,6 +1618,10 @@ const getBalanceWallet = async(privateKey) => {
             console.log(chalk.magentaBright('Balance ZkSync'));
             console.log(`${res / 10**18}ETH`);
             console.log(`${res1 / 10**6}USDC`);
+            await getAmountToken(info.rpc, info.LibertasNFT, address).then(async(res2) => {
+                console.log(chalk.cyanBright('Libertas Omnibus Collection'));
+                console.log(`${res2} NFT`);
+            });
             await getAmountToken(info.rpc, info.LPPool, address).then(async(res2) => {
                 console.log(chalk.cyanBright('SyncSwap ETH/USDC'));
                 console.log(`${res2 / 10**6}LP`);
