@@ -40,6 +40,8 @@ export const info = {
     SpaceFarmer: '0xaCF5a67f2fCFEDA3946ccb1ad9d16d2Eb65c3c96',
     NameService: '0x935442AF47F3dc1c11F006D551E13769F12eab13',
     LibertasNFT: '0xD07180c423F9B8CF84012aA28cC174F3c433EE29',
+    IzumiRouter: '0x9606eC131EeC0F84c95D82c9a63959F2331cF2aC',
+    IZI: '0x16A9494e257703797D747540f01683952547EE5b',
     approveAmount: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
 }
 

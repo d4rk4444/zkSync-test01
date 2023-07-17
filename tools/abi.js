@@ -55,7 +55,7 @@ export const abiToken = [
       "name":"withdraw",
       "inputs": [{"name":"amount","type":"uint256"}]
   },
-]
+];
 
 export const bridgeAbi = [
   {
@@ -135,7 +135,7 @@ export const bridgeAbi = [
     "stateMutability":"payable",
     "type":"function"
   }
-]
+];
 
 export const SSRouterAbi = [
   {
@@ -1314,7 +1314,7 @@ export const SSRouterAbi = [
     "stateMutability": "view",
     "type": "function"
   }
-]
+];
 
 export const SSClassicPoolFactoryAbi = [
   {
@@ -1466,7 +1466,7 @@ export const SSClassicPoolFactoryAbi = [
     "stateMutability": "view",
     "type": "function"
   }
-]
+];
 
 export const SSPoolMasterAbi = [
   {
@@ -1976,7 +1976,7 @@ export const SSPoolMasterAbi = [
     "stateMutability": "view",
     "type": "function"
   }
-]
+];
 
 export const SSLPPoolAbi = [
   {
@@ -2901,7 +2901,7 @@ export const SSLPPoolAbi = [
     "stateMutability": "view",
     "type": "function"
   }
-]
+];
 
 export const nexonFinanceAbi = [
     {
@@ -2966,7 +2966,7 @@ export const nexonFinanceAbi = [
       "inputs": [{"name":"repayAmount","type":"uint256"}],
       "outputs": []
   },
-]
+];
 
 export const bridgeZkSyncAbi = [
   {
@@ -2975,7 +2975,7 @@ export const bridgeZkSyncAbi = [
       "inputs": [{"name":"_l1Receiver","type":"address"}],
       "outputs": []
   },
-]
+];
 
 export const spaceFiRouterAbi = [
   {
@@ -3115,7 +3115,7 @@ export const spaceFiRouterAbi = [
           {"name":"deadline","type":"uint256"}
       ]
   },
-]
+];
 
 export const nameServiceAbi = [
     {
@@ -3132,4 +3132,39 @@ export const nameServiceAbi = [
         ],
         "outputs": []
     },
-]
+];
+
+export const iziAbi = [
+  {
+      "type":"function",
+      "name":"multicall",
+      "inputs": [
+          {"name":"data","type":"bytes[]"},
+      ],
+  },
+  {
+      "type":"function",
+      "name":"swapAmount",
+      "inputs": [
+          {
+              "name":"params",
+              "type":"tuple",
+              "components": [
+                  {"name":"","type":"bytes"},
+                  {"name":"","type":"address"},
+                  {"name":"","type":"uint128"},
+                  {"name":"","type":"uint256"},
+                  {"name":"","type":"uint256"}
+              ]
+          }
+      ],
+  },
+  {
+      "type":"function",
+      "name":"unwrapWETH9",
+      "inputs": [
+          {"name":"minAmount","type":"uint256"},
+          {"name":"recipient","type":"address"}
+      ],
+  },
+];

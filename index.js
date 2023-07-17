@@ -41,6 +41,7 @@ import {
     getSpaceFarmAmount,
     dataSpaceWithdraw,
     dataSpaceDeleteLiquidityETH  } from './tools/spaceFi.js';
+import { dataSwapETHToTokenIzumi, dataSwapTokenToETHIzumi } from './tools/izumi.js';
 import { generateRandomName, dataRegisterName } from './tools/nft.js';
 import { subtract, multiply, divide, composition, add, number } from 'mathjs';
 import fs from 'fs';
@@ -109,38 +110,6 @@ const bridgeETHToZkSync = async(privateKey, type) => {
                 console.log(chalk.redBright('3 ERROR SKIP WALLET'));
                 return;
             }
-            await timeout(pauseTime);
-        }
-    }
-}
-
-const bridgeETHToZkSyncOrbiter = async(privateKey) => {
-    const addressETH = privateToAddress(privateKey);
-    const random = generateRandomAmount(process.env.PERCENT_BRIDGE_TO_ZKSYNC_MIN / 100, process.env.PERCENT_BRIDGE_TO_ZKSYNC_MAX / 100, 3);
-
-    let isReady;
-    while(!isReady) {
-        try {
-            await getETHAmount(info.rpcArbitrum, addressETH).then(async(amountETH) => {
-                await getGasPrice(info.rpcArbitrum).then(async(gasPrice) => {
-                    const amountFee = add(multiply(1100000, gasPrice * 10**9), orbiter.zkSyncEra.holdFee);
-                    amountETH = parseInt(multiply(subtract(amountETH, amountFee), random) / 10**4).toString() + orbiter.zkSyncEra.chainId;
-                    if (Number(amountETH) < orbiter.minAmount * 10**18) {
-                        isReady = true;
-                        logger.log('You can\'t send less than 0.005 ETH');
-                        console.log('You can\'t send less than 0.005 ETH');
-                    } else {
-                        const gasLimit = generateRandomAmount(900000, 1000000, 0);
-                        await sendArbitrumTX(info.rpcArbitrum, gasLimit, gasPrice, gasPrice, orbiter.routerETH, amountETH, null, privateKey);
-                        console.log(chalk.yellow(`Bridge ${amountETH / 10**18}ETH to ZkSync`));
-                        logger.log(`Bridge ${amountETH / 10**18}ETH to ZkSync`);
-                        isReady = true;
-                    }
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
             await timeout(pauseTime);
         }
     }
@@ -582,7 +551,6 @@ const syncSwapETHToUSDC = async(privateKey) => {
                 });
             });
         });
-        await timeout(pauseTime);
     } catch (err) {
         logger.log(err);
         console.log(err.message);
@@ -1490,75 +1458,6 @@ const registerName = async(privateKey) => {
     }
 } //+
 
-const withdrawETHToSubWallet = async(toAddress, privateKey) => {
-    const addressEthereum = privateToAddress(privateKey);
-
-    try {
-        await getETHAmount(info.rpcMainet, addressEthereum).then(async(res) => {
-            await getGasPriceEthereum().then(async(res1) => {
-                let amountETH = subtract(res, 21000 * multiply(add(res1.maxFee, res1.maxPriorityFee), 10**9));
-                amountETH = subtract(amountETH, generateRandomAmount(1 * 10**12, 3 * 10**12, 0));
-                await sendETHTX(info.rpcMainet, 21000, res1.maxFee, res1.maxPriorityFee, toAddress, amountETH, null, privateKey);
-                console.log(chalk.yellow(`Send ${amountETH / 10**18}ETH to ${toAddress} OKX`));
-                logger.log(`Send ${amountETH / 10**18}ETH to ${toAddress} OKX`);
-            });
-        });
-    } catch (err) {
-        logger.log(err.message);
-        console.log(err.message);
-        await timeout(pauseTime);
-    }
-}
-
-const bridgeETHToArbitrumOrbiter = async(privateKey) => {
-    const addressETH = privateToAddress(privateKey);
-
-    let isReady;
-    while(!isReady) {
-        try {
-            await getETHAmount(info.rpc, addressETH).then(async(amountETH) => {
-                await getGasPrice(info.rpc).then(async(gasPrice) => {
-                    await dataSendToken(info.rpc, info.ETH, orbiter.routerETH, '1', addressETH).then(async(res) => {
-                        const amountFee = add(multiply(res.estimateGas, gasPrice * 10**9), orbiter.Arbitrum.holdFee);
-                        const random = generateRandomAmount(process.env.PERCENT_BRIDGE_TO_ETHEREUM_MIN / 100, process.env.PERCENT_BRIDGE_TO_ETHEREUM_MAX / 100, 3);
-                        amountETH = parseInt(multiply(subtract(amountETH, amountFee), random) / 10**4).toString() + orbiter.Arbitrum.chainId;
-                        console.log(chalk.yellow(`Bridge ${amountETH / 10**18}ETH to Arbitrum`));
-                        logger.log(`Bridge ${amountETH / 10**18}ETH to Arbitrum`);
-                        await dataSendToken(info.rpc, info.ETH, orbiter.routerETH, amountETH, addressETH).then(async(res1) => {
-                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, info.ETH, amountETH, res1.encodeABI, privateKey);
-                            isReady = true;
-                        });
-                    });
-                });
-            });
-        } catch (err) {
-            logger.log(err.message);
-            console.log(err.message);
-            await timeout(pauseTime);
-        }
-    }
-}
-
-const withdrawETHToSubWalletArbitrum = async(toAddress, privateKey) => {
-    const addressETH = privateToAddress(privateKey);
-
-    try {
-        await getETHAmount(info.rpcArbitrum, addressETH).then(async(amountETH) => {
-            await getGasPrice(info.rpcArbitrum).then(async(gasPrice) => {
-                gasPrice = (parseFloat(multiply(gasPrice, 1.2)).toFixed(5)).toString();
-                amountETH = subtract(amountETH, 1100000 * multiply(gasPrice, 10**9));
-                await sendArbitrumTX(info.rpcArbitrum, generateRandomAmount(900000, 1000000, 0), gasPrice, gasPrice, toAddress, amountETH, null, privateKey);
-                console.log(chalk.yellow(`Send ${amountETH / 10**18}ETH to ${toAddress} Arbitrum`));
-                logger.log(`Send ${amountETH / 10**18}ETH to ${toAddress} Arbitrum`);
-            });
-        });
-    } catch (err) {
-        logger.log(err.message);
-        console.log(err.message);
-        await timeout(pauseTime);
-    }
-}
-
 const wrapETHSync = async(privateKey) => {
     const address = privateToAddress(privateKey);
     const random = generateRandomAmount(process.env.ETH_SWAP_PERCENT_MIN / 100, process.env.ETH_SWAP_PERCENT_MAX / 100, 3);
@@ -1605,6 +1504,84 @@ const unwrapETHSync = async(privateKey) => {
 
     return true;
 } //+
+
+const izumiSwapETHInToken = async(privateKey, tokenName) => {
+    const address = privateToAddress(privateKey);
+    const random = generateRandomAmount(process.env.ETH_SWAP_PERCENT_MIN / 100, process.env.ETH_SWAP_PERCENT_MAX / 100, 3);
+    const tokenAddress = info[tokenName];
+
+    //SWAP ETH -> TOKEN
+    console.log(chalk.yellow(`Swap ETH -> ${tokenName}`));
+    logger.log(`Swap ETH -> ${tokenName}`);
+    try {
+        await getETHAmount(info.rpc, address).then(async(amountETH) => {
+            amountETH = parseInt(multiply(amountETH, random));
+            await dataSwapETHToTokenIzumi(info.rpc, amountETH, tokenAddress, 2000, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.IzumiRouter, amountETH, res.encodeABI, privateKey);
+                    console.log(chalk.magentaBright(`Swap ETH -> ${tokenName} Successful`));
+                    logger.log(`Swap ETH -> ${tokenName} Successful`);
+                });
+            });
+        });
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    return true;
+}
+
+const izumiSwapTokenInETH = async(privateKey, tokenName) => {
+    const address = privateToAddress(privateKey);
+    const tokenAddress = info[tokenName];
+
+    //APPROVE TOKEN
+    console.log(chalk.yellow(`Approve ${tokenName}`));
+    logger.log(`Approve ${tokenName}`);
+    try {
+        await getAmountToken(info.rpc, tokenAddress, address).then(async(balance) => {
+            await checkAllowance(info.rpc, tokenAddress, address, info.IzumiRouter).then(async(res) => {
+                if (Number(res) < balance) {
+                    console.log(chalk.yellow(`Start Approve ${tokenName} for Izumi Router`));
+                    logger.log(`Start Approve ${tokenName} for Izumi Router`);
+                    await dataApprove(info.rpc, tokenAddress, info.IzumiRouter, address).then(async(res1) => {
+                        await getGasPrice(info.rpc).then(async(gasPrice) => {
+                            await sendZkSyncTX(info.rpc, res1.estimateGas, gasPrice, tokenAddress, null, res1.encodeABI, privateKey);
+                        });
+                    });
+                } else if (Number(res) >= balance) {
+                    console.log(chalk.magentaBright(`Approve ${tokenName} Successful`));
+                    logger.log(`Approve ${tokenName} Successful`);
+                }
+            });
+        });
+        await timeout(pauseTime);
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+
+    //SWAP TOKEN -> ETH
+    console.log(chalk.yellow(`SWAP ${tokenName} -> ETH`));
+    logger.log(`SWAP ${tokenName} -> ETH`);
+    try {
+        await getAmountToken(info.rpc, tokenAddress, address).then(async(amountUSDC) => {
+            await dataSwapTokenToETHIzumi(info.rpc, amountUSDC, tokenAddress, 2000, address).then(async(res) => {
+                await getGasPrice(info.rpc).then(async(gasPrice) => {
+                    await sendZkSyncTX(info.rpc, res.estimateGas, gasPrice, info.IzumiRouter, null, res.encodeABI, privateKey);
+                    console.log(chalk.yellow(`Successful Swap`));
+                });
+            });
+        });
+    } catch (err) {
+        logger.log(err);
+        console.log(err.message);
+        return;
+    }
+}
 
 const getBalanceWallet = async(privateKey) => {
     const address = privateToAddress(privateKey);
@@ -1660,16 +1637,13 @@ const getBalanceWallet = async(privateKey) => {
         'RANDOM',
         'ALL FUNC',
         'NFT',
+        'Other DEX',
         'OTHER'
     ];
     const bridgeStage = [
         'Bridge ETH to ZkSync AMOUNT',
         'Bridge ETH to ZkSync PERCENT',
-        'Bridge ETH Arbitrum -> ZkSync PERCENT',
         'Bridge ETH to Ethereum',
-        'Bridge ETH to Arbitrum [Orbiter]',
-        'Send to SubWallet Ethereum',
-        'Send to SubWallet Arbitrum'
     ];
     const randomStage = [
         'SyncSwap USDC [Swap, +LP], SpaceFi USDC [Swap, +LP, +Farming], SyncSwap OT [Swap, +LP], SpaceFi SPACE [Swap, +LP], NexonFinance USDC/ETH [Swap, Deposit, Borrow, Repay, Withdraw, Swap]',
@@ -1696,6 +1670,12 @@ const getBalanceWallet = async(privateKey) => {
     ];
     const nftStage = [
         'Register Random name.era 0.003ETH',
+    ];
+    const otherDEX = [
+        'Izumi Swap ETH -> USDC [in %]',
+        'Izumi Swap All USDC -> ETH',
+        'Izumi Swap ETH -> IZI [in %]',
+        'Izumi Swap All IZI -> ETH',
     ];
     const otherStage = [
         'SyncSwap ETH <-> USDC Without adding LP',
@@ -1728,6 +1708,7 @@ const getBalanceWallet = async(privateKey) => {
     let index3;
     let index4;
     let index5;
+    let index6;
     if (index == -1) { process.exit() };
     console.log(chalk.green(`Start ${mainStage[index]}`));
     logger.log(`Start ${mainStage[index]}`);
@@ -1752,10 +1733,15 @@ const getBalanceWallet = async(privateKey) => {
         console.log(chalk.green(`Start ${nftStage[index4]}`));
         logger.log(`Start ${nftStage[index4]}`);
     } else if (index == 4) {
-        index5 = readline.keyInSelect(otherStage, 'Choose stage!');
+        index5 = readline.keyInSelect(otherDEX, 'Choose stage!');
         if (index5 == -1) { process.exit() };
-        console.log(chalk.green(`Start ${otherStage[index5]}`));
-        logger.log(`Start ${otherStage[index5]}`);
+        console.log(chalk.green(`Start ${otherDEX[index5]}`));
+        logger.log(`Start ${otherDEX[index5]}`);
+    } else if (index == 5) {
+        index6 = readline.keyInSelect(otherStage, 'Choose stage!');
+        if (index6 == -1) { process.exit() };
+        console.log(chalk.green(`Start ${otherStage[index6]}`));
+        logger.log(`Start ${otherStage[index6]}`);
     }
     
     for (let i = 0; i < wallet.length; i++) {
@@ -1770,18 +1756,10 @@ const getBalanceWallet = async(privateKey) => {
         } else if (index1 == 1) {
             await bridgeETHToZkSync(wallet[i], 1);
         } else if (index1 == 2) {
-            await bridgeETHToZkSyncOrbiter(wallet[i]);
-        } else if (index1 == 3) {
             await bridgeETHToEthereum(wallet[i]);
-        } else if (index1 == 4) {
-            await bridgeETHToArbitrumOrbiter(wallet[i]);
-        } else if (index1 == 5) {
-            const walletOKX = parseFile('subWallet.txt');
-            await withdrawETHToSubWallet(walletOKX[i], wallet[i]);
-        } else if (index1 == 6) {
-            const walletOKX = parseFile('subWallet.txt');
-            await withdrawETHToSubWalletArbitrum(walletOKX[i], wallet[i]);
-        } else if (index2 == 0) { //RANDOM STAGE
+        }
+        
+        if (index2 == 0) { //RANDOM STAGE
             shuffle(randomPartStart);
             for (let s = 0; s < randomPartStart.length; s++) {
                 await randomPartStart[s](wallet[i], true);
@@ -1823,7 +1801,9 @@ const getBalanceWallet = async(privateKey) => {
             for (let n = 0; n < numberAction; n++) {
                 await randomPartWithoutLiq[generateRandomAmount(0, randomPartWithoutLiq.length - 1, 0)](wallet[i], false);
             }
-        } else if (index3 == 0) { //ALL FUNCTION
+        }
+        
+        if (index3 == 0) { //ALL FUNCTION
             await syncSwapStart(wallet[i]);
         } else if (index3 == 1) {
             await syncSwapEnd(wallet[i]);
@@ -1847,21 +1827,35 @@ const getBalanceWallet = async(privateKey) => {
             await wrapETHSync(wallet[i]);
         } else if (index3 == 11) {
             await unwrapETHSync(wallet[i]);
-        } else if (index4 == 0) { //NFT STAGE
+        }
+        
+        if (index4 == 0) { //NFT STAGE
             await registerName(wallet[i]);
-        } else if (index5 == 0) { //OTHER STAGE
-            await syncSwapWithoutLiq(wallet[i], true);
+        }
+
+        if (index5 == 0) { //OTHER DEX STAGE
+            await izumiSwapETHInToken(wallet[i], 'USDC');
         } else if (index5 == 1) {
-            await syncSwapOTWithoutLiq(wallet[i]);
+            await izumiSwapTokenInETH(wallet[i], 'USDC');
         } else if (index5 == 2) {
-            await spaceFiWithoutLiq(wallet[i], true);
+            await izumiSwapETHInToken(wallet[i], 'IZI');
         } else if (index5 == 3) {
+            await izumiSwapTokenInETH(wallet[i], 'IZI');
+        }
+        
+        if (index6 == 0) { //OTHER STAGE
+            await syncSwapWithoutLiq(wallet[i], true);
+        } else if (index6 == 1) {
+            await syncSwapOTWithoutLiq(wallet[i]);
+        } else if (index6 == 2) {
+            await spaceFiWithoutLiq(wallet[i], true);
+        } else if (index6 == 3) {
             await spaceFiSPACEWithoutLiq(wallet[i]);
-        } else if (index5 == 4) {
+        } else if (index6 == 4) {
             await syncSwapETHToUSDC(wallet[i]);
-        } else if (index5 == 5) {
+        } else if (index6 == 5) {
             await syncSwapUSDCToETH(wallet[i]);
-        } else if (index5 == 6) {
+        } else if (index6 == 6) {
             pauseWalletTime = 0;
             await getBalanceWallet(wallet[i]);
         }
